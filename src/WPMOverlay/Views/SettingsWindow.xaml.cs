@@ -75,8 +75,8 @@ namespace WPMOverlay.Views
             TxtScaleVal.Text = $"{_tempSettings.ScaleFactor:F1}x";
 
             ChkAutoHide.IsChecked = _tempSettings.AutoHideEnabled;
-            SliderHideDelay.Value = _tempSettings.AutoHideDelaySeconds;
-            TxtDelayVal.Text = $"{_tempSettings.AutoHideDelaySeconds:F1}s";
+            SliderHideDelay.Value = Math.Round(_tempSettings.AutoHideDelaySeconds);
+            TxtDelayVal.Text = $"{Math.Round(_tempSettings.AutoHideDelaySeconds)}s";
 
             Chk15s.IsChecked = _tempSettings.Show15s;
             Chk30s.IsChecked = _tempSettings.Show30s;
@@ -121,7 +121,7 @@ namespace WPMOverlay.Views
         private void SliderHideDelay_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (TxtDelayVal != null)
-                TxtDelayVal.Text = $"{e.NewValue:F1}s";
+                TxtDelayVal.Text = $"{Math.Round(e.NewValue)}s";
         }
 
         private void SliderPenalty_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -148,7 +148,7 @@ namespace WPMOverlay.Views
                 s.ScaleFactor = SliderScale.Value;
 
                 s.AutoHideEnabled = ChkAutoHide.IsChecked == true;
-                s.AutoHideDelaySeconds = SliderHideDelay.Value;
+                s.AutoHideDelaySeconds = Math.Round(SliderHideDelay.Value);
 
                 s.Show15s = Chk15s.IsChecked == true;
                 s.Show30s = Chk30s.IsChecked == true;

@@ -70,9 +70,27 @@ namespace WPMOverlay.Views
 
         private void SetupTrayIcon()
         {
+            System.Drawing.Icon? customIcon = null;
+            try
+            {
+                var iconUri = new Uri("pack://application:,,,/app_icon.ico");
+                var streamInfo = System.Windows.Application.GetResourceStream(iconUri);
+                if (streamInfo != null)
+                {
+                    using (streamInfo.Stream)
+                    {
+                        customIcon = new System.Drawing.Icon(streamInfo.Stream);
+                    }
+                }
+            }
+            catch
+            {
+                customIcon = System.Drawing.SystemIcons.Application;
+            }
+
             _trayIcon = new Forms.NotifyIcon
             {
-                Icon = System.Drawing.SystemIcons.Application,
+                Icon = customIcon ?? System.Drawing.SystemIcons.Application,
                 Text = "WPM Overlay - Typing Speed Tracker",
                 Visible = true
             };

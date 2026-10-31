@@ -32,3 +32,22 @@ This document records defects identified during development, compilation, and te
 - **Root Cause Analysis (RCA)**: The JSON configuration file was saved with a UTF-8 Byte Order Mark (EF BB BF), which standard Python `utf-8` decoding rejects.
 - **Resolution Strategy**: Switched file reader encoding to `utf-8-sig`, which transparently strips the BOM.
 - **Code Anchors**: Automation update scripts for `config.json`.
+
+---
+
+## 3. Contrast Inversion on ComboBox Dropdown Popups & Missing Tray Icon
+
+- **Issue Symptom**: 
+  1. The theme preset ComboBox dropdown in `SettingsWindow` rendered light/white text on a white/light dropdown popup surface (contrast inversion / WCAG 1.4.3 violation).
+  2. The application in the Windows system tray displayed a generic OS fallback placeholder icon instead of a branded keyboard speedometer icon.
+  3. The auto-hide delay slider displayed arbitrary decimal values (`4.0s`, `7.2s`) rather than snapping cleanly to whole 1-second intervals.
+- **Root Cause Analysis (RCA)**:
+  1. Standard WPF `ComboBox` embeds an unstyled native Win32 `Popup` container that inherits `SystemColors.WindowBrush` (pure `#FFFFFF` white) unless its `ItemContainerStyle` and `Popup` template are explicitly tokenized.
+  2. The project lacked an explicit `<ApplicationIcon>` resource in its `.csproj` and `MainWindow.xaml.cs` fell back to `System.Drawing.SystemIcons.Application`.
+  3. The `Slider` lacked `IsSnapToTickEnabled="True"` and `TickFrequency="1"`.
+- **Resolution Strategy**:
+  1. Implemented `DarkComboBoxStyle` in `SettingsWindow.xaml.Resources` featuring an explicit dark `#161B26` popup canvas, illuminated `#38BDF8` borders, and high-contrast `#F8FAFC` item text with `#2563EB` hover backgrounds.
+  2. Generated a multi-resolution `app_icon.ico` (16x16 to 256x256), embedded it into the `.csproj`, and wired it to `MainWindow`, `HistoryWindow`, `SettingsWindow`, and the `NotifyIcon` system tray instance.
+  3. Replaced floating-point slider increments with strict 1-second snaps (`Minimum="1"`, `Maximum="15"`, `TickFrequency="1"`) formatted purely as integers (`$"{val}s"`).
+- **Code Anchors**: [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L12-L95), [`SettingsWindow.xaml.cs`](file:///src/WPMOverlay/Views/SettingsWindow.xaml.cs#L75-L125), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L71-L90), [`WPMOverlay.csproj`](file:///src/WPMOverlay/WPMOverlay.csproj#L9-L15).
+

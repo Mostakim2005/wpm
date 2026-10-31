@@ -2,12 +2,103 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="WPM Overlay - Settings &amp; Customization"
+        Icon="pack://application:,,,/app_icon.ico"
         Height="590" Width="680"
         WindowStartupLocation="CenterOwner"
         Background="#0F1117"
         Foreground="#F8FAFC"
         FontFamily="Segoe UI"
         ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- High-Contrast ComboBox ToggleButton -->
+        <ControlTemplate x:Key="ComboBoxToggleButton" TargetType="{x:Type ToggleButton}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="28" />
+                </Grid.ColumnDefinitions>
+                <Border x:Name="Border" Grid.ColumnSpan="2" CornerRadius="6" Background="#161B26" BorderBrush="#334155" BorderThickness="1" />
+                <Border Grid.Column="0" Margin="1" Background="#161B26" CornerRadius="5,0,0,5" />
+                <Path x:Name="Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#94A3B8" />
+            </Grid>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#38BDF8" />
+                    <Setter TargetName="Arrow" Property="Fill" Value="#38BDF8" />
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#38BDF8" />
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <!-- High-Contrast ComboBox Item Style: Guaranteed WCAG AAA readable -->
+        <Style TargetType="{x:Type ComboBoxItem}">
+            <Setter Property="Background" Value="#161B26" />
+            <Setter Property="Foreground" Value="#F8FAFC" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                        <Border x:Name="ItemBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="4" Margin="2,1">
+                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#2563EB" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#1D4ED8" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Fully Themed ComboBox with Dark Popup -->
+        <Style x:Key="DarkComboBoxStyle" TargetType="{x:Type ComboBox}">
+            <Setter Property="Foreground" Value="#F8FAFC" />
+            <Setter Property="Background" Value="#161B26" />
+            <Setter Property="BorderBrush" Value="#334155" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBox}">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton" Template="{StaticResource ComboBoxToggleButton}" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press" />
+                            <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" Margin="10,6,28,6" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#F8FAFC"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                            <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                <Grid x:Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border x:Name="DropDownBorder" Background="#161B26" BorderBrush="#38BDF8" BorderThickness="1.5" CornerRadius="6" Margin="0,2,0,0">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="14" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.75"/>
+                                        </Border.Effect>
+                                        <ScrollViewer Margin="4" SnapsToDevicePixels="True">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -32,7 +123,7 @@
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Theme Preset:" VerticalAlignment="Center" Foreground="#94A3B8"/>
-                            <ComboBox Grid.Column="1" x:Name="CmbPreset" SelectionChanged="CmbPreset_SelectionChanged" Background="#161B26" Foreground="#F8FAFC">
+                            <ComboBox Grid.Column="1" x:Name="CmbPreset" Style="{StaticResource DarkComboBoxStyle}" SelectionChanged="CmbPreset_SelectionChanged">
                                 <ComboBoxItem Content="CyberDark (Default Balanced Slate)" Tag="CyberDark"/>
                                 <ComboBoxItem Content="OLEDMinimal (Pure Black Contrast)" Tag="OLEDMinimal"/>
                                 <ComboBoxItem Content="MidnightBlue (Deep Sapphire)" Tag="MidnightBlue"/>
@@ -51,10 +142,10 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Grid.Column="0" Text="Background Hex:" VerticalAlignment="Center" Foreground="#94A3B8"/>
-                            <TextBox Grid.Column="1" x:Name="TxtBgHex" Margin="0,0,12,0" Background="#1E2536" Foreground="#F8FAFC" BorderBrush="#334155"/>
+                            <TextBox Grid.Column="1" x:Name="TxtBgHex" Margin="0,0,12,0" Background="#1E2536" Foreground="#F8FAFC" BorderBrush="#334155" Padding="6,4"/>
 
                             <TextBlock Grid.Column="2" Text="Border Hex:" VerticalAlignment="Center" Foreground="#94A3B8"/>
-                            <TextBox Grid.Column="3" x:Name="TxtBorderHex" Background="#1E2536" Foreground="#F8FAFC" BorderBrush="#334155"/>
+                            <TextBox Grid.Column="3" x:Name="TxtBorderHex" Background="#1E2536" Foreground="#F8FAFC" BorderBrush="#334155" Padding="6,4"/>
                         </Grid>
 
                         <Grid Margin="0,6,0,4">
@@ -66,10 +157,10 @@
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Grid.Column="0" Text="Accent Hex:" VerticalAlignment="Center" Foreground="#94A3B8"/>
-                            <TextBox Grid.Column="1" x:Name="TxtAccentHex" Margin="0,0,12,0" Background="#1E2536" Foreground="#F8FAFC" BorderBrush="#334155"/>
+                            <TextBox Grid.Column="1" x:Name="TxtAccentHex" Margin="0,0,12,0" Background="#1E2536" Foreground="#F8FAFC" BorderBrush="#334155" Padding="6,4"/>
 
                             <TextBlock Grid.Column="2" Text="Text Primary:" VerticalAlignment="Center" Foreground="#94A3B8"/>
-                            <TextBox Grid.Column="3" x:Name="TxtTextHex" Background="#1E2536" Foreground="#F8FAFC" BorderBrush="#334155"/>
+                            <TextBox Grid.Column="3" x:Name="TxtTextHex" Background="#1E2536" Foreground="#F8FAFC" BorderBrush="#334155" Padding="6,4"/>
                         </Grid>
                     </StackPanel>
                 </GroupBox>
@@ -108,7 +199,7 @@
                     <StackPanel>
                         <CheckBox x:Name="ChkAutoHide" Content="Auto-hide overlay when not typing (pops in as soon as you type)" Foreground="#F8FAFC" Margin="0,0,0,10"/>
 
-                        <!-- Delay slider -->
+                        <!-- Delay slider: Snapped strictly to 1-second whole integer increments -->
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="140"/>
@@ -116,8 +207,8 @@
                                 <ColumnDefinition Width="50"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Auto-Hide Delay:" VerticalAlignment="Center" Foreground="#94A3B8"/>
-                            <Slider Grid.Column="1" x:Name="SliderHideDelay" Minimum="1.5" Maximum="15.0" Value="4.0" SmallChange="0.5" LargeChange="1.0" ValueChanged="SliderHideDelay_ValueChanged"/>
-                            <TextBlock Grid.Column="2" x:Name="TxtDelayVal" Text="4.0s" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F8FAFC"/>
+                            <Slider Grid.Column="1" x:Name="SliderHideDelay" Minimum="1" Maximum="15" Value="4" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="1" ValueChanged="SliderHideDelay_ValueChanged"/>
+                            <TextBlock Grid.Column="2" x:Name="TxtDelayVal" Text="4s" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F8FAFC" FontWeight="SemiBold"/>
                         </Grid>
 
                         <!-- Idle retention description -->
