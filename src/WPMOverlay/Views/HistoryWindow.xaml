@@ -5,8 +5,8 @@
         Icon="pack://application:,,,/app_icon.ico"
         Height="540" Width="820"
         WindowStartupLocation="CenterOwner"
-        Background="#0F1117"
-        Foreground="#F8FAFC"
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource AppTextPrimaryBrush}"
         FontFamily="Segoe UI">
 
     <Grid Margin="20">
@@ -21,85 +21,85 @@
         <Grid Grid.Row="0" Margin="0,0,0,16">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="📊" FontSize="22" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                <TextBlock Text="Typing Performance History" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                <TextBlock Text="Typing Performance History" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="📥 Export CSV" Click="ExportCsv_Click" Padding="12,6" Margin="0,0,8,0" Background="#1E293B" Foreground="#38BDF8" BorderBrush="#334155" Cursor="Hand"/>
-                <Button Content="🔄 Refresh" Click="Refresh_Click" Padding="12,6" Background="#1E293B" Foreground="#94A3B8" BorderBrush="#334155" Cursor="Hand"/>
+                <Button Content="📥 Export CSV" Click="ExportCsv_Click" Padding="12,6" Margin="0,0,8,0" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
+                <Button Content="🔄 Refresh" Click="Refresh_Click" Padding="12,6" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppTextSecondaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
             </StackPanel>
         </Grid>
 
         <!-- KPI Summary Cards -->
         <UniformGrid Grid.Row="1" Columns="5" Margin="0,0,0,16">
             <!-- All-Time Top -->
-            <Border Background="#161B26" BorderBrush="#2563EB" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="4">
+            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="1.5" CornerRadius="8" Padding="12,10" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="ALL-TIME TOP" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8"/>
-                    <TextBlock x:Name="TxtAllTimeTop" Text="0 WPM" FontSize="18" FontWeight="Bold" Foreground="#38BDF8" Margin="0,4,0,0"/>
+                    <TextBlock Text="ALL-TIME TOP" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                    <TextBlock x:Name="TxtAllTimeTop" Text="0 WPM" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
             <!-- Today's Top -->
-            <Border Background="#161B26" BorderBrush="#10B981" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="4">
+            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppHighlightBrush}" BorderThickness="1.5" CornerRadius="8" Padding="12,10" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="TODAY'S TOP" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8"/>
-                    <TextBlock x:Name="TxtTodayTop" Text="0 WPM" FontSize="18" FontWeight="Bold" Foreground="#34D399" Margin="0,4,0,0"/>
+                    <TextBlock Text="TODAY'S TOP" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                    <TextBlock x:Name="TxtTodayTop" Text="0 WPM" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppHighlightBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
             <!-- Lifetime Average -->
-            <Border Background="#161B26" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="4">
+            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="LIFETIME AVG" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8"/>
-                    <TextBlock x:Name="TxtLifetimeAvg" Text="0 WPM" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,4,0,0"/>
+                    <TextBlock Text="LIFETIME AVG" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                    <TextBlock x:Name="TxtLifetimeAvg" Text="0 WPM" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
             <!-- Total Words -->
-            <Border Background="#161B26" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="4">
+            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="TOTAL WORDS" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8"/>
-                    <TextBlock x:Name="TxtTotalWords" Text="0" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,4,0,0"/>
+                    <TextBlock Text="TOTAL WORDS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                    <TextBlock x:Name="TxtTotalWords" Text="0" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
 
             <!-- Total Sessions -->
-            <Border Background="#161B26" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="4">
+            <Border Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="4">
                 <StackPanel>
-                    <TextBlock Text="TOTAL SESSIONS" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8"/>
-                    <TextBlock x:Name="TxtTotalSessions" Text="0" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,4,0,0"/>
+                    <TextBlock Text="TOTAL SESSIONS" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
+                    <TextBlock x:Name="TxtTotalSessions" Text="0" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
 
         <!-- DataGrid of Sessions -->
-        <Border Grid.Row="2" Background="#161B26" BorderBrush="#262D3D" BorderThickness="1" CornerRadius="8" Padding="2">
+        <Border Grid.Row="2" Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="2">
             <DataGrid x:Name="GridSessions"
                       AutoGenerateColumns="False"
                       IsReadOnly="True"
                       Background="Transparent"
-                      Foreground="#F8FAFC"
+                      Foreground="{DynamicResource AppTextPrimaryBrush}"
                       BorderThickness="0"
                       GridLinesVisibility="Horizontal"
-                      HorizontalGridLinesBrush="#262D3D"
-                      RowBackground="#161B26"
-                      AlternatingRowBackground="#1B2130"
+                      HorizontalGridLinesBrush="{DynamicResource AppBorderBrush}"
+                      RowBackground="{DynamicResource AppSurfaceBrush}"
+                      AlternatingRowBackground="{DynamicResource AppSurfaceElevatedBrush}"
                       HeadersVisibility="Column"
                       CanUserResizeRows="False"
                       SelectionMode="Single">
                 <DataGrid.Resources>
                     <Style TargetType="{x:Type DataGridColumnHeader}">
-                        <Setter Property="Background" Value="#1E2536"/>
-                        <Setter Property="Foreground" Value="#94A3B8"/>
+                        <Setter Property="Background" Value="{DynamicResource AppSurfaceElevatedBrush}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource AppTextSecondaryBrush}"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="Padding" Value="10,8"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#334155"/>
+                        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
                     </Style>
                     <Style TargetType="{x:Type DataGridCell}">
                         <Setter Property="Padding" Value="10,6"/>
                         <Setter Property="BorderThickness" Value="0"/>
-                        <Setter Property="Foreground" Value="#F8FAFC"/>
+                        <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
                     </Style>
                 </DataGrid.Resources>
                 <DataGrid.Columns>
@@ -117,8 +117,8 @@
 
         <!-- Bottom Controls -->
         <Grid Grid.Row="3" Margin="0,14,0,0">
-            <Button Content="🗑️ Clear All History" Click="ClearHistory_Click" HorizontalAlignment="Left" Padding="12,6" Background="#261A1E" Foreground="#F87171" BorderBrush="#7F1D1D" Cursor="Hand"/>
-            <Button Content="Close" Click="Close_Click" HorizontalAlignment="Right" Padding="20,6" Background="#2563EB" Foreground="#FFFFFF" BorderBrush="#3B82F6" Cursor="Hand" FontWeight="SemiBold"/>
+            <Button Content="🗑️ Clear All History" Click="ClearHistory_Click" HorizontalAlignment="Left" Padding="12,6" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="#EF4444" BorderBrush="#DC2626" Cursor="Hand"/>
+            <Button Content="Close" Click="Close_Click" HorizontalAlignment="Right" Padding="20,6" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppTextOnAccentBrush}" BorderBrush="{DynamicResource AppAccentBrush}" Cursor="Hand" FontWeight="SemiBold"/>
         </Grid>
     </Grid>
 </Window>

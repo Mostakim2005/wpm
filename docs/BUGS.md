@@ -53,7 +53,27 @@ This document records defects identified during development, compilation, and te
 
 ---
 
-## 4. Overlay Fade-out During Settings Dialog & Static Settings Dialog Surface
+## 5. Auto-Hide Delay Invisibility on Light Themes, Premature Auto-Hide on Interaction, and Accidental Key Mash / Spam Noise
+
+- **Issue Symptom**:
+  1. The Auto-Hide delay indicator (`TxtDelayVal`) was not visible when switching to light themes (`LightBlue`), appearing blank or unselected.
+  2. The auto-hide delay (e.g. 10s) felt ignored; closing settings or moving the mouse off the overlay caused the HUD to fade out immediately in 0ms without waiting the 10 seconds.
+  3. Accidentally holding down keys (auto-repeat) or rapid mashing of keys inflated the real-time and peak WPM metrics.
+  4. Visual elements across windows contained residual hardcoded color values, risking contrast inversions across custom themes.
+- **Root Cause Analysis (RCA)**:
+  1. `TxtDelayVal` and slider labels in `SettingsWindow.xaml` had hardcoded `Foreground="#F8FAFC"` (white) which rendered invisibly against light backgrounds (`#F0F6FC`).
+  2. `MainWindow.xaml.cs` previously invoked `OnTypingIdle()` directly in `Window_MouseLeave` and immediately following `settingsWin.ShowDialog()`, instantly aborting the visible state instead of running an inactivity countdown.
+  3. `TypingEngine.cs` processed raw Win32 `WM_KEYDOWN` messages indiscriminately, allowing 30Hz key-repeat events and palm-mashing chatter to be counted as net words.
+- **Resolution Strategy**:
+  1. **Dynamic Resource Architecture (`ThemeManager.cs`)**: Replaced all hardcoded colors across `MainWindow.xaml`, `SettingsWindow.xaml`, and `HistoryWindow.xaml` with `{DynamicResource}` token brushes (`AppBackgroundBrush`, `AppSurfaceBrush`, `AppSurfaceElevatedBrush`, `AppBorderBrush`, `AppAccentBrush`, `AppHighlightBrush`, `AppTextPrimaryBrush`, `AppTextSecondaryBrush`, `AppTextOnAccentBrush`). All 9 themes now adapt with guaranteed WCAG AAA contrast in both dark and light modes.
+  2. **Smart Keystroke & Anti-Spam Filter (`TypingEngine.IsValidTypingKeystroke`)**:
+     - *Anti-Autorepeat / Key Hold*: Caps consecutive identical non-backspace characters to at most 2; 3rd+ repeats are blocked.
+     - *Anti-Chatter / Mash*: Rejects keystrokes arriving $<30$ms apart as hardware bounce or simultaneous palm hits.
+     - *Anti-Keyboard Roll*: Caps unbroken non-delimited character sequences to 25 characters until a word boundary (Space, Enter, Tab, Backspace) is struck.
+     - *Anti-Oscillation*: Detects and suppresses 2-key rapid alternation spam ($>4$ cycles).
+  3. **Inactivity Grace Period Timer (`_autoHideGraceTimer`)**: Configured a `DispatcherTimer` in `MainWindow.xaml.cs` respecting `AutoHideDelaySeconds` so moving the mouse away or closing settings waits the exact configured interval before initiating the fade-out animation.
+- **Code Anchors**: [`ThemeManager.cs`](file:///src/WPMOverlay/Services/ThemeManager.cs#L12-L85), [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L190-L205), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L36-L45), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L295-L315), [`TypingEngine.cs`](file:///src/WPMOverlay/Services/TypingEngine.cs#L105-L180).
+
 
 - **Issue Symptom**: 
   1. Changing themes in Settings seemed to do nothing because the floating HUD on screen was at `Opacity = 0.0` (faded out due to user inactivity while navigating dialogs).

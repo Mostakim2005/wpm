@@ -1,9 +1,6 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
-using WpfColor = System.Windows.Media.Color;
-using WpfColorConverter = System.Windows.Media.ColorConverter;
 using WPMOverlay.Models;
 using WPMOverlay.Services;
 
@@ -38,6 +35,7 @@ namespace WPMOverlay.Views
                 Show15s = current.Show15s,
                 Show30s = current.Show30s,
                 Show60s = current.Show60s,
+                Show5m = current.Show5m,
                 ShowTop = current.ShowTop,
                 ShowAvg = current.ShowAvg,
                 ShowLast = current.ShowLast,
@@ -90,73 +88,7 @@ namespace WPMOverlay.Views
             SliderPenalty.Value = _tempSettings.ErrorPenaltyMultiplier;
             TxtPenaltyVal.Text = $"{_tempSettings.ErrorPenaltyMultiplier:F1}x";
 
-            UpdatePreviewSwatch();
-        }
-
-        private void UpdatePreviewSwatch()
-        {
-            try
-            {
-                var bg = (WpfColor)WpfColorConverter.ConvertFromString(_tempSettings.BackgroundHex);
-                var border = (WpfColor)WpfColorConverter.ConvertFromString(_tempSettings.BorderHex);
-                var accent = (WpfColor)WpfColorConverter.ConvertFromString(_tempSettings.AccentHex);
-                var textPrimary = (WpfColor)WpfColorConverter.ConvertFromString(_tempSettings.TextPrimaryHex);
-                var textSecondary = (WpfColor)WpfColorConverter.ConvertFromString(_tempSettings.TextSecondaryHex);
-                var highlight = (WpfColor)WpfColorConverter.ConvertFromString(_tempSettings.HighlightHex);
-
-                // Dynamically adapt the entire SettingsWindow surface
-                if (_tempSettings.ThemePreset == "LightBlue")
-                {
-                    Background = new SolidColorBrush(WpfColor.FromRgb(240, 246, 252));
-                    HeaderTitle.Foreground = new SolidColorBrush(WpfColor.FromRgb(15, 23, 42));
-                }
-                else
-                {
-                    Background = new SolidColorBrush(WpfColor.FromRgb(bg.R, bg.G, bg.B));
-                    HeaderTitle.Foreground = new SolidColorBrush(WpfColor.FromRgb(248, 250, 252));
-                }
-
-                var accentBrush = new SolidColorBrush(accent);
-                var borderBrush = new SolidColorBrush(border);
-                var textSecBrush = new SolidColorBrush(textSecondary);
-                var textPrimBrush = new SolidColorBrush(textPrimary);
-
-                GroupThemes.Foreground = accentBrush;
-                GroupThemes.BorderBrush = borderBrush;
-                GroupSize.Foreground = accentBrush;
-                GroupSize.BorderBrush = borderBrush;
-                GroupVisibility.Foreground = accentBrush;
-                GroupVisibility.BorderBrush = borderBrush;
-                GroupMetrics.Foreground = accentBrush;
-                GroupMetrics.BorderBrush = borderBrush;
-                GroupAccuracy.Foreground = accentBrush;
-                GroupAccuracy.BorderBrush = borderBrush;
-
-                ChkAutoHide.Foreground = textPrimBrush;
-                Chk15s.Foreground = textPrimBrush;
-                Chk30s.Foreground = textPrimBrush;
-                Chk60s.Foreground = textPrimBrush;
-                Chk5m.Foreground = textPrimBrush;
-                ChkTop.Foreground = textPrimBrush;
-                ChkAvg.Foreground = textPrimBrush;
-                ChkLast.Foreground = textPrimBrush;
-                ChkStartWindows.Foreground = textPrimBrush;
-                ChkAlwaysOnTop.Foreground = textPrimBrush;
-
-                // Live Preview Swatch
-                PreviewBorder.Background = new SolidColorBrush(bg);
-                PreviewBorder.BorderBrush = borderBrush;
-
-                TxtPreviewTitle.Foreground = accentBrush;
-                TxtPreviewSub.Foreground = textPrimBrush;
-
-                PreviewBadge.Background = new SolidColorBrush(highlight);
-                TxtPreviewBadge.Foreground = new SolidColorBrush(WpfColor.FromRgb(15, 23, 42));
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error updating preview swatch: {ex.Message}");
-            }
+            ThemeManager.ApplyTheme(_tempSettings);
         }
 
         private void CmbPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -165,10 +97,7 @@ namespace WPMOverlay.Views
             {
                 string preset = (string)selected.Tag;
                 _tempSettings.ApplyThemePreset(preset);
-                UpdatePreviewSwatch();
-
-                // Live-update the floating overlay on screen immediately!
-                _settingsService.UpdateSettings(s => CommitToSettings(s));
+                ThemeManager.ApplyTheme(_tempSettings);
             }
         }
 
@@ -176,24 +105,28 @@ namespace WPMOverlay.Views
         {
             if (TxtOpacityVal != null)
                 TxtOpacityVal.Text = $"{Math.Round(e.NewValue * 100)}%";
+            _tempSettings.WindowOpacity = e.NewValue;
         }
 
         private void SliderScale_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (TxtScaleVal != null)
                 TxtScaleVal.Text = $"{e.NewValue:F1}x";
+            _tempSettings.ScaleFactor = e.NewValue;
         }
 
         private void SliderHideDelay_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (TxtDelayVal != null)
                 TxtDelayVal.Text = $"{Math.Round(e.NewValue)}s";
+            _tempSettings.AutoHideDelaySeconds = Math.Round(e.NewValue);
         }
 
         private void SliderPenalty_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (TxtPenaltyVal != null)
                 TxtPenaltyVal.Text = $"{e.NewValue:F1}x";
+            _tempSettings.ErrorPenaltyMultiplier = e.NewValue;
         }
 
         private void CommitToSettings(AppSettings s)
@@ -226,15 +159,24 @@ namespace WPMOverlay.Views
         private void Apply_Click(object sender, RoutedEventArgs e)
         {
             _settingsService.UpdateSettings(s => CommitToSettings(s));
+            ThemeManager.ApplyTheme(_settingsService.CurrentSettings);
             StartupManager.SetStartup(ChkStartWindows.IsChecked == true);
         }
 
         private void SaveClose_Click(object sender, RoutedEventArgs e)
         {
             _settingsService.UpdateSettings(s => CommitToSettings(s));
+            ThemeManager.ApplyTheme(_settingsService.CurrentSettings);
             StartupManager.SetStartup(ChkStartWindows.IsChecked == true);
 
             DialogResult = true;
+            Close();
+        }
+
+        private void Cancel_Click(object sender, RoutedEventArgs e)
+        {
+            ThemeManager.ApplyTheme(_settingsService.CurrentSettings);
+            DialogResult = false;
             Close();
         }
 
@@ -258,12 +200,7 @@ namespace WPMOverlay.Views
             _tempSettings.ErrorPenaltyMultiplier = 1.0;
 
             PopulateUiFromSettings();
-        }
-
-        private void Cancel_Click(object sender, RoutedEventArgs e)
-        {
-            DialogResult = false;
-            Close();
+            ThemeManager.ApplyTheme(_tempSettings);
         }
     }
 }

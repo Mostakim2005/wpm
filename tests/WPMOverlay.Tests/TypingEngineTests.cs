@@ -137,5 +137,117 @@ namespace WPMOverlay.Tests
             bool isEnabled = StartupManager.IsStartupEnabled();
             Assert.True(isEnabled || !isEnabled);
         }
+
+        [Fact]
+        public void SmartFiltering_ConsecutiveSameKey_DropsThirdAndLaterRepeats()
+        {
+            using var hook = new KeyboardHook();
+            var db = new DatabaseService();
+            var settings = new SettingsService();
+            using var engine = new TypingEngine(hook, db, settings);
+
+            var start = DateTime.UtcNow;
+
+            // 1st 'A' (VK 65) -> valid
+            Assert.True(engine.IsValidTypingKeystroke(65, false, start.AddMilliseconds(50)));
+            // 2nd 'A' (VK 65) -> valid (e.g. double letter like in "book")
+            Assert.True(engine.IsValidTypingKeystroke(65, false, start.AddMilliseconds(150)));
+            // 3rd 'A' (VK 65) -> invalid (auto-repeat / key hold)
+            Assert.False(engine.IsValidTypingKeystroke(65, false, start.AddMilliseconds(250)));
+            // 4th 'A' (VK 65) -> invalid (auto-repeat / key hold)
+            Assert.False(engine.IsValidTypingKeystroke(65, false, start.AddMilliseconds(350)));
+
+            // Switching to 'B' (VK 66) -> valid
+            Assert.True(engine.IsValidTypingKeystroke(66, false, start.AddMilliseconds(450)));
+        }
+
+        [Fact]
+        public void SmartFiltering_ChatterUnder30ms_IsDropped()
+        {
+            using var hook = new KeyboardHook();
+            var db = new DatabaseService();
+            var settings = new SettingsService();
+            using var engine = new TypingEngine(hook, db, settings);
+
+            var now = DateTime.UtcNow;
+
+            // Key 1 -> valid
+            Assert.True(engine.IsValidTypingKeystroke(65, false, now));
+            // Key 2 in 10ms (physically impossible for human finger, switch bounce) -> dropped
+            Assert.False(engine.IsValidTypingKeystroke(66, false, now.AddMilliseconds(10)));
+            // Key 3 after 60ms -> valid
+            Assert.True(engine.IsValidTypingKeystroke(67, false, now.AddMilliseconds(70)));
+        }
+
+        [Fact]
+        public void SmartFiltering_LongUnspacedMash_DropsAfter25CharsUntilBoundary()
+        {
+            using var hook = new KeyboardHook();
+            var db = new DatabaseService();
+            var settings = new SettingsService();
+            using var engine = new TypingEngine(hook, db, settings);
+
+            var now = DateTime.UtcNow;
+
+            // Type 25 characters without space using 4 different keys (A, B, C, D)
+            for (int i = 0; i < 25; i++)
+            {
+                int key = 65 + (i % 4);
+                now = now.AddMilliseconds(50);
+                Assert.True(engine.IsValidTypingKeystroke(key, false, now), $"Failed at key {i}");
+            }
+
+            // 26th character with no space -> dropped as key mashing streak
+            now = now.AddMilliseconds(50);
+            Assert.False(engine.IsValidTypingKeystroke(70, false, now));
+
+            // Space (VK 0x20) -> resets streak and is accepted
+            now = now.AddMilliseconds(50);
+            Assert.True(engine.IsValidTypingKeystroke(0x20, false, now));
+
+            // Next character after space -> accepted
+            now = now.AddMilliseconds(50);
+            Assert.True(engine.IsValidTypingKeystroke(70, false, now));
+        }
+
+        [Fact]
+        public void SmartFiltering_OscillationSpam_IsDropped()
+        {
+            using var hook = new KeyboardHook();
+            var db = new DatabaseService();
+            var settings = new SettingsService();
+            using var engine = new TypingEngine(hook, db, settings);
+
+            var now = DateTime.UtcNow;
+
+            // Alternate A B A B A
+            Assert.True(engine.IsValidTypingKeystroke(65, false, now.AddMilliseconds(50)));
+            Assert.True(engine.IsValidTypingKeystroke(66, false, now.AddMilliseconds(100)));
+            Assert.True(engine.IsValidTypingKeystroke(65, false, now.AddMilliseconds(150)));
+            Assert.True(engine.IsValidTypingKeystroke(66, false, now.AddMilliseconds(200)));
+            Assert.True(engine.IsValidTypingKeystroke(65, false, now.AddMilliseconds(250)));
+
+            // 6th alternating key: A B A B A B -> triggers oscillation detector
+            Assert.False(engine.IsValidTypingKeystroke(66, false, now.AddMilliseconds(300)));
+        }
+
+        [Fact]
+        public void SmartFiltering_NaturalTypingWithSpaces_AllKeystrokesAccepted()
+        {
+            using var hook = new KeyboardHook();
+            var db = new DatabaseService();
+            var settings = new SettingsService();
+            using var engine = new TypingEngine(hook, db, settings);
+
+            var now = DateTime.UtcNow;
+            string text = "the quick brown fox";
+
+            foreach (char c in text)
+            {
+                now = now.AddMilliseconds(80);
+                int vk = (c == ' ') ? 0x20 : (int)char.ToUpper(c);
+                Assert.True(engine.IsValidTypingKeystroke(vk, false, now), $"Failed for char '{c}'");
+            }
+        }
     }
 }

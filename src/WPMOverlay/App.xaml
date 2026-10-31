@@ -4,6 +4,17 @@
              xmlns:local="clr-namespace:WPMOverlay"
              StartupUri="Views/MainWindow.xaml">
     <Application.Resources>
-         
+        <!-- Dynamic Design Tokens (Dynamically updated at runtime by ThemeManager) -->
+        <SolidColorBrush x:Key="AppBackgroundBrush" Color="#12141A"/>
+        <SolidColorBrush x:Key="AppBorderBrush" Color="#2563EB"/>
+        <SolidColorBrush x:Key="AppAccentBrush" Color="#38BDF8"/>
+        <SolidColorBrush x:Key="AppHighlightBrush" Color="#10B981"/>
+        <SolidColorBrush x:Key="AppTextPrimaryBrush" Color="#F8FAFC"/>
+        <SolidColorBrush x:Key="AppTextSecondaryBrush" Color="#94A3B8"/>
+        <SolidColorBrush x:Key="AppSurfaceBrush" Color="#161B26"/>
+        <SolidColorBrush x:Key="AppSurfaceElevatedBrush" Color="#1E2536"/>
+        <SolidColorBrush x:Key="AppInputBackgroundBrush" Color="#161B26"/>
+        <SolidColorBrush x:Key="AppTextOnAccentBrush" Color="#0F172A"/>
+        <SolidColorBrush x:Key="AppDividerBrush" Color="#334155"/>
     </Application.Resources>
 </Application>

@@ -3,8 +3,8 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using WpfColor = System.Windows.Media.Color;
-using WpfColorConverter = System.Windows.Media.ColorConverter;
 using WPMOverlay.Models;
 using WPMOverlay.Services;
 using Forms = System.Windows.Forms;
@@ -17,6 +17,7 @@ namespace WPMOverlay.Views
         private readonly DatabaseService _databaseService;
         private readonly SettingsService _settingsService;
         private readonly TypingEngine _typingEngine;
+        private readonly DispatcherTimer _autoHideGraceTimer;
 
         private Forms.NotifyIcon? _trayIcon;
         private bool _isHovered = false;
@@ -31,6 +32,16 @@ namespace WPMOverlay.Views
             _databaseService = new DatabaseService();
             _settingsService = new SettingsService();
             _typingEngine = new TypingEngine(_keyboardHook, _databaseService, _settingsService);
+
+            _autoHideGraceTimer = new DispatcherTimer();
+            _autoHideGraceTimer.Tick += (s, e) =>
+            {
+                _autoHideGraceTimer.Stop();
+                if (!_typingEngine.IsTypingActive && _settingsService.CurrentSettings.AutoHideEnabled && !_isHovered && !_isSettingsOpen && !_isExplicitlyHidden)
+                {
+                    StartFadeOut();
+                }
+            };
 
             ApplySettings(_settingsService.CurrentSettings);
 
@@ -55,6 +66,7 @@ namespace WPMOverlay.Views
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            _autoHideGraceTimer.Stop();
             _settingsService.SettingsUpdated -= OnSettingsUpdated;
             _typingEngine.MetricsUpdated -= OnMetricsUpdated;
             _typingEngine.TypingStarted -= OnTypingStarted;
@@ -140,58 +152,12 @@ namespace WPMOverlay.Views
 
         private void ApplySettings(AppSettings s)
         {
+            // Apply dynamic design tokens to all open windows
+            ThemeManager.ApplyTheme(s);
+
             // Apply scale
             HudScaleTransform.ScaleX = s.ScaleFactor;
             HudScaleTransform.ScaleY = s.ScaleFactor;
-
-            // Apply colors using ColorConverter
-            try
-            {
-                CardBorder.Background = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(s.BackgroundHex));
-                CardBorder.BorderBrush = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(s.BorderHex));
-                VerticalDivider.Background = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(s.BorderHex));
-
-                var textPrimary = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(s.TextPrimaryHex));
-                var textSecondary = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(s.TextSecondaryHex));
-                var accent = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(s.AccentHex));
-                var highlight = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString(s.HighlightHex));
-
-                // Left labels & values
-                Label15s.Foreground = textSecondary;
-                Value15s.Foreground = accent;
-                Unit15s.Foreground = textSecondary;
-
-                Label30s.Foreground = textSecondary;
-                Value30s.Foreground = textPrimary;
-                Unit30s.Foreground = textSecondary;
-
-                Label60s.Foreground = textSecondary;
-                Value60s.Foreground = textPrimary;
-                Unit60s.Foreground = textSecondary;
-
-                Label5m.Foreground = textSecondary;
-                Value5m.Foreground = accent;
-                Unit5m.Foreground = textSecondary;
-
-                // Right labels & values
-                LabelTop.Foreground = textSecondary;
-                ValueTop.Foreground = highlight;
-                UnitTop.Foreground = textSecondary;
-
-                LabelAvg.Foreground = textSecondary;
-                ValueAvg.Foreground = textPrimary;
-                UnitAvg.Foreground = textSecondary;
-
-                LabelLast.Foreground = textSecondary;
-                ValueLast.Foreground = accent;
-                UnitLast.Foreground = textSecondary;
-
-                AccuracyText.Foreground = textSecondary;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error applying color tokens: {ex.Message}");
-            }
 
             // Metric visibility
             Row15s.Visibility = s.Show15s ? Visibility.Visible : Visibility.Collapsed;
@@ -220,7 +186,7 @@ namespace WPMOverlay.Views
 
         private void UpdateVisuals()
         {
-            var summary = _typingEngine.CachedSummary;
+            var summary = _databaseService.GetStatsSummary();
             bool active = _typingEngine.IsTypingActive;
 
             if (active)
@@ -272,21 +238,54 @@ namespace WPMOverlay.Views
             }
         }
 
+        private void StartFadeIn()
+        {
+            if (_isExplicitlyHidden) return;
+            var anim = new DoubleAnimation
+            {
+                To = _settingsService.CurrentSettings.WindowOpacity,
+                Duration = TimeSpan.FromMilliseconds(200),
+                EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+            };
+            BeginAnimation(OpacityProperty, anim);
+        }
+
+        private void StartFadeOut()
+        {
+            if (_isExplicitlyHidden || _isHovered || _isSettingsOpen) return;
+            if (_settingsService.CurrentSettings.AutoHideEnabled)
+            {
+                var anim = new DoubleAnimation
+                {
+                    To = 0.0,
+                    Duration = TimeSpan.FromMilliseconds(600),
+                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+                };
+                BeginAnimation(OpacityProperty, anim);
+            }
+        }
+
+        private void TriggerAutoHideGracePeriod()
+        {
+            if (_isHovered || _isSettingsOpen || _isExplicitlyHidden || !_settingsService.CurrentSettings.AutoHideEnabled) return;
+
+            if (!_typingEngine.IsTypingActive)
+            {
+                double delaySec = _settingsService.CurrentSettings.AutoHideDelaySeconds;
+                if (delaySec < 1.0) delaySec = 1.0;
+                _autoHideGraceTimer.Stop();
+                _autoHideGraceTimer.Interval = TimeSpan.FromSeconds(delaySec);
+                _autoHideGraceTimer.Start();
+            }
+        }
+
         private void OnTypingStarted()
         {
             if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
             Dispatcher.Invoke(() =>
             {
-                if (_isExplicitlyHidden) return;
-
-                // Animate Fade In
-                var anim = new DoubleAnimation
-                {
-                    To = _settingsService.CurrentSettings.WindowOpacity,
-                    Duration = TimeSpan.FromMilliseconds(200),
-                    EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
-                };
-                BeginAnimation(OpacityProperty, anim);
+                _autoHideGraceTimer.Stop();
+                StartFadeIn();
             });
         }
 
@@ -295,19 +294,7 @@ namespace WPMOverlay.Views
             if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
             Dispatcher.Invoke(() =>
             {
-                if (_isExplicitlyHidden || _isHovered || _isSettingsOpen) return;
-
-                if (_settingsService.CurrentSettings.AutoHideEnabled)
-                {
-                    // Animate Fade Out to 0
-                    var anim = new DoubleAnimation
-                    {
-                        To = 0.0,
-                        Duration = TimeSpan.FromMilliseconds(600),
-                        EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
-                    };
-                    BeginAnimation(OpacityProperty, anim);
-                }
+                StartFadeOut();
             });
         }
 
@@ -328,7 +315,7 @@ namespace WPMOverlay.Views
         private void Window_MouseEnter(object sender, System.Windows.Input.MouseEventArgs e)
         {
             _isHovered = true;
-            // When hovered, ensure full visibility so user can read or interact
+            _autoHideGraceTimer.Stop();
             if (!_isExplicitlyHidden)
             {
                 BeginAnimation(OpacityProperty, null);
@@ -339,10 +326,7 @@ namespace WPMOverlay.Views
         private void Window_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
         {
             _isHovered = false;
-            if (!_typingEngine.IsTypingActive && _settingsService.CurrentSettings.AutoHideEnabled && !_isExplicitlyHidden)
-            {
-                OnTypingIdle();
-            }
+            TriggerAutoHideGracePeriod();
         }
 
         private void ToggleOverlayVisibility()
@@ -350,6 +334,7 @@ namespace WPMOverlay.Views
             _isExplicitlyHidden = !_isExplicitlyHidden;
             if (_isExplicitlyHidden)
             {
+                _autoHideGraceTimer.Stop();
                 BeginAnimation(OpacityProperty, null);
                 Opacity = 0.0;
             }
@@ -378,6 +363,7 @@ namespace WPMOverlay.Views
         private void MenuHide_Click(object sender, RoutedEventArgs e)
         {
             _isExplicitlyHidden = true;
+            _autoHideGraceTimer.Stop();
             BeginAnimation(OpacityProperty, null);
             Opacity = 0.0;
         }
@@ -396,6 +382,7 @@ namespace WPMOverlay.Views
         private void OpenSettingsWindow()
         {
             _isSettingsOpen = true;
+            _autoHideGraceTimer.Stop();
 
             // Stop any ongoing fade-out and guarantee overlay is 100% visible on screen while configuring
             BeginAnimation(OpacityProperty, null);
@@ -408,11 +395,7 @@ namespace WPMOverlay.Views
             _isSettingsOpen = false;
 
             ApplySettings(_settingsService.CurrentSettings);
-
-            if (!_typingEngine.IsTypingActive && _settingsService.CurrentSettings.AutoHideEnabled && !_isExplicitlyHidden)
-            {
-                OnTypingIdle();
-            }
+            TriggerAutoHideGracePeriod();
         }
 
         private void ExitApplication()

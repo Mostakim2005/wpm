@@ -16,6 +16,13 @@ namespace WPMOverlay.Services
         private readonly object _lock = new();
         private readonly List<KeystrokeRecord> _rollingBuffer = new();
 
+        // Smart Filtering & Anti-Spam State
+        private int _lastVkCode = -1;
+        private int _consecutiveSameKeyCount = 0;
+        private DateTime _lastRawKeystrokeTime = DateTime.MinValue;
+        private int _unbrokenCharsWithoutBoundary = 0;
+        private readonly Queue<int> _recentKeyHistory = new(6);
+
         // Current Active Session State
         private bool _isSessionActive = false;
         private DateTime _sessionStartTime;
@@ -100,12 +107,95 @@ namespace WPMOverlay.Services
             }
         }
 
+        /// <summary>
+        /// Smart Filtering: Detects and rejects accidental key mashing, key holding/autorepeat,
+        /// mechanical chatter, and unnatural spam patterns so they do not inflate WPM.
+        /// </summary>
+        public bool IsValidTypingKeystroke(int vkCode, bool isBackspace, DateTime now)
+        {
+            // 1. Hardware bounce / Simultaneous multi-key mash:
+            // Human fingers cannot deliberately press two keys within 30ms of each other.
+            double deltaMs = (now - _lastRawKeystrokeTime).TotalMilliseconds;
+            _lastRawKeystrokeTime = now;
+
+            if (deltaMs >= 0 && deltaMs < 30)
+            {
+                return false; // Chatter / simultaneous mash
+            }
+
+            // 2. Backspace handling: allow Backspace but reset unbroken char streak
+            if (isBackspace)
+            {
+                _consecutiveSameKeyCount = 0;
+                _unbrokenCharsWithoutBoundary = 0;
+                _lastVkCode = vkCode;
+                return true;
+            }
+
+            // 3. Word boundary detection (Space=0x20, Enter=0x0D, Tab=0x09)
+            if (vkCode == 0x20 || vkCode == 0x0D || vkCode == 0x09)
+            {
+                _consecutiveSameKeyCount = 0;
+                _unbrokenCharsWithoutBoundary = 0;
+                _lastVkCode = vkCode;
+                return true;
+            }
+
+            // 4. Consecutive identical key auto-repeat / key holding suppression:
+            // In genuine typing, no English/standard word contains > 2 identical consecutive characters.
+            // 3 or more of the same key in a row ("aaaaa...", "11111...") is key holding / repeat.
+            if (vkCode == _lastVkCode)
+            {
+                _consecutiveSameKeyCount++;
+                if (_consecutiveSameKeyCount > 2)
+                {
+                    return false; // Suppress auto-repeat
+                }
+            }
+            else
+            {
+                _consecutiveSameKeyCount = 1;
+                _lastVkCode = vkCode;
+            }
+
+            // 5. Unbroken character sequence without a word boundary:
+            // If someone mashes keys continuously for > 25 characters without space, enter, or backspace,
+            // ignore the spam characters until a delimiter is entered.
+            _unbrokenCharsWithoutBoundary++;
+            if (_unbrokenCharsWithoutBoundary > 25)
+            {
+                return false; // Suppress unspaced key mash
+            }
+
+            // 6. Rapid alternation spam detection (e.g. mashing two keys back-and-forth like 'fjfjfjfjfj'):
+            if (_recentKeyHistory.Count >= 6) _recentKeyHistory.Dequeue();
+            _recentKeyHistory.Enqueue(vkCode);
+            if (_recentKeyHistory.Count == 6)
+            {
+                var arr = _recentKeyHistory.ToArray();
+                if (arr[0] == arr[2] && arr[2] == arr[4] &&
+                    arr[1] == arr[3] && arr[3] == arr[5] &&
+                    arr[0] != arr[1])
+                {
+                    return false; // Suppress oscillation spam
+                }
+            }
+
+            return true;
+        }
+
         private void OnKeyPressed(int vkCode, bool isBackspace)
         {
             DateTime now = DateTime.UtcNow;
 
             lock (_lock)
             {
+                // Apply smart filtering to reject spam and accidental holds
+                if (!IsValidTypingKeystroke(vkCode, isBackspace, now))
+                {
+                    return;
+                }
+
                 bool wasIdle = !_isSessionActive;
 
                 if (!_isSessionActive)
@@ -325,6 +415,12 @@ namespace WPMOverlay.Services
                 Current60sWpm = 0;
                 Current5mWpm = 0;
                 CurrentInstantWpm = 0;
+
+                _lastVkCode = -1;
+                _consecutiveSameKeyCount = 0;
+                _unbrokenCharsWithoutBoundary = 0;
+                _recentKeyHistory.Clear();
+                _lastRawKeystrokeTime = DateTime.MinValue;
             }
             MetricsUpdated?.Invoke();
         }

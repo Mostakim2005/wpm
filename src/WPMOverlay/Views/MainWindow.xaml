@@ -17,7 +17,7 @@
 
     <!-- Right Click Context Menu -->
     <Window.ContextMenu>
-        <ContextMenu x:Name="OverlayContextMenu">
+        <ContextMenu x:Name="OverlayContextMenu" Background="{DynamicResource AppSurfaceBrush}" Foreground="{DynamicResource AppTextPrimaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}">
             <MenuItem Header="📊 History &amp; Analytics" Click="MenuHistory_Click" FontWeight="SemiBold"/>
             <MenuItem Header="⚙️ Settings &amp; Theme" Click="MenuSettings_Click"/>
             <Separator/>
@@ -39,12 +39,14 @@
         <Border x:Name="CardBorder"
                 CornerRadius="10"
                 BorderThickness="1.5"
+                Background="{DynamicResource AppBackgroundBrush}"
+                BorderBrush="{DynamicResource AppBorderBrush}"
                 Padding="12,8,12,8"
                 Cursor="Hand"
                 ToolTip="Drag to reposition. Right-click for options.">
 
             <Border.Effect>
-                <DropShadowEffect BlurRadius="18" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.55"/>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="2" Direction="270" Color="#000000" Opacity="0.45"/>
             </Border.Effect>
 
             <Grid>
@@ -61,7 +63,7 @@
                         <ColumnDefinition Width="Auto" MinWidth="100"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- LEFT COLUMN: Rolling Windows (15s, 30s, 60s) -->
+                    <!-- LEFT COLUMN: Rolling Windows (15s, 30s, 60s, 5m) -->
                     <StackPanel Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
                         <!-- 15s -->
                         <Grid x:Name="Row15s" Margin="0,1,0,2">
@@ -69,10 +71,10 @@
                                 <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="15s:" x:Name="Label15s" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="15s:" x:Name="Label15s" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock x:Name="Value15s" Text="0" FontSize="14" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
-                                <TextBlock Text=" wpm" x:Name="Unit15s" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
+                                <TextBlock x:Name="Value15s" Text="0" Foreground="{DynamicResource AppAccentBrush}" FontSize="14" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                                <TextBlock Text=" wpm" x:Name="Unit15s" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
                             </StackPanel>
                         </Grid>
 
@@ -82,10 +84,10 @@
                                 <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="30s:" x:Name="Label30s" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="30s:" x:Name="Label30s" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock x:Name="Value30s" Text="0" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
-                                <TextBlock Text=" wpm" x:Name="Unit30s" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
+                                <TextBlock x:Name="Value30s" Text="0" Foreground="{DynamicResource AppTextPrimaryBrush}" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                                <TextBlock Text=" wpm" x:Name="Unit30s" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
                             </StackPanel>
                         </Grid>
 
@@ -95,10 +97,10 @@
                                 <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="60s:" x:Name="Label60s" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="60s:" x:Name="Label60s" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock x:Name="Value60s" Text="0" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
-                                <TextBlock Text=" wpm" x:Name="Unit60s" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
+                                <TextBlock x:Name="Value60s" Text="0" Foreground="{DynamicResource AppTextPrimaryBrush}" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                                <TextBlock Text=" wpm" x:Name="Unit60s" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
                             </StackPanel>
                         </Grid>
 
@@ -108,16 +110,16 @@
                                 <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="5m:" x:Name="Label5m" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="5m:" x:Name="Label5m" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock x:Name="Value5m" Text="0" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
-                                <TextBlock Text=" wpm" x:Name="Unit5m" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
+                                <TextBlock x:Name="Value5m" Text="0" Foreground="{DynamicResource AppAccentBrush}" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                                <TextBlock Text=" wpm" x:Name="Unit5m" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
 
                     <!-- DIVIDER LINE -->
-                    <Border Grid.Column="1" x:Name="VerticalDivider" Width="1" VerticalAlignment="Stretch" Margin="0,2,0,2" Opacity="0.4"/>
+                    <Border Grid.Column="1" x:Name="VerticalDivider" Width="1" VerticalAlignment="Stretch" Margin="0,2,0,2" Background="{DynamicResource AppDividerBrush}"/>
 
                     <!-- RIGHT COLUMN: Records (Top, Avg, Last) -->
                     <StackPanel Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Center">
@@ -127,10 +129,10 @@
                                 <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Top:" x:Name="LabelTop" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="Top:" x:Name="LabelTop" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock x:Name="ValueTop" Text="0" FontSize="14" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
-                                <TextBlock Text=" wpm" x:Name="UnitTop" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
+                                <TextBlock x:Name="ValueTop" Text="0" Foreground="{DynamicResource AppHighlightBrush}" FontSize="14" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                                <TextBlock Text=" wpm" x:Name="UnitTop" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
                             </StackPanel>
                         </Grid>
 
@@ -140,10 +142,10 @@
                                 <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Avg:" x:Name="LabelAvg" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="Avg:" x:Name="LabelAvg" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock x:Name="ValueAvg" Text="0" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
-                                <TextBlock Text=" wpm" x:Name="UnitAvg" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
+                                <TextBlock x:Name="ValueAvg" Text="0" Foreground="{DynamicResource AppTextPrimaryBrush}" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                                <TextBlock Text=" wpm" x:Name="UnitAvg" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
                             </StackPanel>
                         </Grid>
 
@@ -153,10 +155,10 @@
                                 <ColumnDefinition Width="34"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Last:" x:Name="LabelLast" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="0" Text="Last:" x:Name="LabelLast" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                                <TextBlock x:Name="ValueLast" Text="0" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
-                                <TextBlock Text=" wpm" x:Name="UnitLast" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
+                                <TextBlock x:Name="ValueLast" Text="0" Foreground="{DynamicResource AppAccentBrush}" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                                <TextBlock Text=" wpm" x:Name="UnitLast" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -175,7 +177,7 @@
                         <TextBlock x:Name="StatusText" Text="Live" FontSize="9.5" FontWeight="Medium" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="2" x:Name="AccuracyText" Text="100% Acc" FontSize="9.5" VerticalAlignment="Center" HorizontalAlignment="Right" Opacity="0.75"/>
+                    <TextBlock Grid.Column="2" x:Name="AccuracyText" Text="100% Acc" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="9.5" VerticalAlignment="Center" HorizontalAlignment="Right" Opacity="0.85"/>
                 </Grid>
             </Grid>
         </Border>

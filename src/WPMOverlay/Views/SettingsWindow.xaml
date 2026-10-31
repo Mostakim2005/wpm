@@ -3,40 +3,40 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="WPM Overlay - Settings &amp; Customization"
         Icon="pack://application:,,,/app_icon.ico"
-        Height="590" Width="680"
+        Height="600" Width="680"
         WindowStartupLocation="CenterOwner"
-        Background="#0F1117"
-        Foreground="#F8FAFC"
+        Background="{DynamicResource AppBackgroundBrush}"
+        Foreground="{DynamicResource AppTextPrimaryBrush}"
         FontFamily="Segoe UI"
         ResizeMode="NoResize">
 
     <Window.Resources>
-        <!-- High-Contrast ComboBox ToggleButton -->
-        <ControlTemplate x:Key="ComboBoxToggleButton" TargetType="{x:Type ToggleButton}">
+        <!-- Dynamic ComboBox ToggleButton -->
+        <ControlTemplate x:Key="DynamicComboBoxToggleButton" TargetType="{x:Type ToggleButton}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition />
                     <ColumnDefinition Width="28" />
                 </Grid.ColumnDefinitions>
-                <Border x:Name="Border" Grid.ColumnSpan="2" CornerRadius="6" Background="#161B26" BorderBrush="#334155" BorderThickness="1" />
-                <Border Grid.Column="0" Margin="1" Background="#161B26" CornerRadius="5,0,0,5" />
-                <Path x:Name="Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="#94A3B8" />
+                <Border x:Name="Border" Grid.ColumnSpan="2" CornerRadius="6" Background="{DynamicResource AppInputBackgroundBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" />
+                <Border Grid.Column="0" Margin="1" Background="{DynamicResource AppInputBackgroundBrush}" CornerRadius="5,0,0,5" />
+                <Path x:Name="Arrow" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" Fill="{DynamicResource AppTextSecondaryBrush}" />
             </Grid>
             <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="Border" Property="BorderBrush" Value="#38BDF8" />
-                    <Setter TargetName="Arrow" Property="Fill" Value="#38BDF8" />
+                    <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+                    <Setter TargetName="Arrow" Property="Fill" Value="{DynamicResource AppAccentBrush}" />
                 </Trigger>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter TargetName="Border" Property="BorderBrush" Value="#38BDF8" />
+                    <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
                 </Trigger>
             </ControlTemplate.Triggers>
         </ControlTemplate>
 
-        <!-- High-Contrast ComboBox Item Style: Guaranteed WCAG AAA readable -->
+        <!-- Dynamic High-Contrast ComboBox Item Style -->
         <Style TargetType="{x:Type ComboBoxItem}">
-            <Setter Property="Background" Value="#161B26" />
-            <Setter Property="Foreground" Value="#F8FAFC" />
+            <Setter Property="Background" Value="{DynamicResource AppSurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
             <Setter Property="Padding" Value="10,8" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="BorderThickness" Value="0" />
@@ -48,12 +48,12 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
-                                <Setter TargetName="ItemBorder" Property="Background" Value="#2563EB" />
-                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AppAccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextOnAccentBrush}" />
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="ItemBorder" Property="Background" Value="#1D4ED8" />
-                                <Setter Property="Foreground" Value="#FFFFFF" />
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AppAccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextOnAccentBrush}" />
                                 <Setter Property="FontWeight" Value="SemiBold" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -62,30 +62,30 @@
             </Setter>
         </Style>
 
-        <!-- Fully Themed ComboBox with Dark Popup -->
-        <Style x:Key="DarkComboBoxStyle" TargetType="{x:Type ComboBox}">
-            <Setter Property="Foreground" Value="#F8FAFC" />
-            <Setter Property="Background" Value="#161B26" />
-            <Setter Property="BorderBrush" Value="#334155" />
+        <!-- Fully Themed Dynamic ComboBox with Tokenized Popup -->
+        <Style x:Key="DynamicComboBoxStyle" TargetType="{x:Type ComboBox}">
+            <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AppInputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ComboBox}">
                         <Grid>
-                            <ToggleButton x:Name="ToggleButton" Template="{StaticResource ComboBoxToggleButton}" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press" />
+                            <ToggleButton x:Name="ToggleButton" Template="{StaticResource DynamicComboBoxToggleButton}" Focusable="false" IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press" />
                             <ContentPresenter x:Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" Margin="10,6,28,6" VerticalAlignment="Center" HorizontalAlignment="Left">
                                 <ContentPresenter.Resources>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Foreground" Value="#F8FAFC"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
                                     </Style>
                                 </ContentPresenter.Resources>
                             </ContentPresenter>
                             <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
                                 <Grid x:Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" MaxHeight="{TemplateBinding MaxDropDownHeight}">
-                                    <Border x:Name="DropDownBorder" Background="#161B26" BorderBrush="#38BDF8" BorderThickness="1.5" CornerRadius="6" Margin="0,2,0,0">
+                                    <Border x:Name="DropDownBorder" Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="1.5" CornerRadius="6" Margin="0,2,0,0">
                                         <Border.Effect>
-                                            <DropShadowEffect BlurRadius="14" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.75"/>
+                                            <DropShadowEffect BlurRadius="14" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.45"/>
                                         </Border.Effect>
                                         <ScrollViewer Margin="4" SnapsToDevicePixels="True">
                                             <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -108,21 +108,21 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock x:Name="HeaderTitle" Grid.Row="0" Text="⚙️ Overlay Settings &amp; Personalization" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+        <TextBlock x:Name="HeaderTitle" Grid.Row="0" Text="⚙️ Overlay Settings &amp; Personalization" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" Margin="0,0,0,16"/>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,10,0">
 
-                <!-- SECTION 1: ADAPTIVE THEMES (NO MANUAL HEX) -->
-                <GroupBox x:Name="GroupThemes" Header="🎨 Adaptive Themes (Color Theory Systems)" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
+                <!-- SECTION 1: ADAPTIVE THEMES -->
+                <GroupBox x:Name="GroupThemes" Header="🎨 Adaptive Themes (Color Theory Systems)" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Margin="0,0,0,14" Padding="12">
                     <StackPanel>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="130"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Select Theme:" VerticalAlignment="Center" Foreground="#94A3B8" FontWeight="SemiBold"/>
-                            <ComboBox Grid.Column="1" x:Name="CmbPreset" Style="{StaticResource DarkComboBoxStyle}" SelectionChanged="CmbPreset_SelectionChanged">
+                            <TextBlock Text="Select Theme:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}" FontWeight="SemiBold"/>
+                            <ComboBox Grid.Column="1" x:Name="CmbPreset" Style="{StaticResource DynamicComboBoxStyle}" SelectionChanged="CmbPreset_SelectionChanged">
                                 <ComboBoxItem Content="CyberDark (Default Balanced Slate)" Tag="CyberDark"/>
                                 <ComboBoxItem Content="LightBlue (Crisp Daytime Ice &amp; Ocean Cyan)" Tag="LightBlue"/>
                                 <ComboBoxItem Content="Glassmorphism (Frosted Translucent Glass)" Tag="Glassmorphism"/>
@@ -136,18 +136,18 @@
                         </Grid>
 
                         <!-- Live In-Dialog Preview Swatch -->
-                        <Border x:Name="PreviewBorder" CornerRadius="8" BorderThickness="1.5" Padding="12,8" Margin="0,4,0,2">
+                        <Border x:Name="PreviewBorder" CornerRadius="8" BorderThickness="1.5" Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Padding="12,8" Margin="0,4,0,2">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock x:Name="TxtPreviewTitle" Text="Live Theme Preview" FontSize="11" FontWeight="Bold"/>
-                                    <TextBlock x:Name="TxtPreviewSub" Text="15s: 64 WPM  |  Avg: 52 WPM  |  Last: 48 WPM" FontSize="12" FontFamily="Consolas, Segoe UI" Margin="0,2,0,0"/>
+                                    <TextBlock x:Name="TxtPreviewTitle" Text="Live Theme Preview" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}"/>
+                                    <TextBlock x:Name="TxtPreviewSub" Text="15s: 64 WPM  |  Avg: 52 WPM  |  Last: 48 WPM" FontSize="12" FontFamily="Consolas, Segoe UI" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <Border Grid.Column="1" x:Name="PreviewBadge" CornerRadius="4" Padding="6,2" VerticalAlignment="Center">
-                                    <TextBlock x:Name="TxtPreviewBadge" Text="96% Acc" FontSize="10" FontWeight="Bold"/>
+                                <Border Grid.Column="1" x:Name="PreviewBadge" CornerRadius="4" Padding="6,2" Background="{DynamicResource AppHighlightBrush}" VerticalAlignment="Center">
+                                    <TextBlock x:Name="TxtPreviewBadge" Text="96% Acc" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource AppSurfaceBrush}"/>
                                 </Border>
                             </Grid>
                         </Border>
@@ -155,7 +155,7 @@
                 </GroupBox>
 
                 <!-- SECTION 2: DIMENSIONS & TRANSPARENCY -->
-                <GroupBox x:Name="GroupSize" Header="📐 Size, Scaling &amp; Transparency" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
+                <GroupBox x:Name="GroupSize" Header="📐 Size, Scaling &amp; Transparency" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Margin="0,0,0,14" Padding="12">
                     <StackPanel>
                         <!-- Opacity -->
                         <Grid Margin="0,0,0,10">
@@ -164,9 +164,9 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="50"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Overlay Opacity:" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                            <TextBlock Text="Overlay Opacity:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                             <Slider Grid.Column="1" x:Name="SliderOpacity" Minimum="0.4" Maximum="1.0" Value="0.95" SmallChange="0.05" LargeChange="0.1" ValueChanged="SliderOpacity_ValueChanged"/>
-                            <TextBlock Grid.Column="2" x:Name="TxtOpacityVal" Text="95%" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F8FAFC"/>
+                            <TextBlock Grid.Column="2" x:Name="TxtOpacityVal" Text="95%" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold"/>
                         </Grid>
 
                         <!-- Scale -->
@@ -176,17 +176,17 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="50"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Scale Factor:" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                            <TextBlock Text="Scale Factor:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                             <Slider Grid.Column="1" x:Name="SliderScale" Minimum="0.75" Maximum="1.6" Value="1.0" SmallChange="0.05" LargeChange="0.1" ValueChanged="SliderScale_ValueChanged"/>
-                            <TextBlock Grid.Column="2" x:Name="TxtScaleVal" Text="1.0x" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F8FAFC"/>
+                            <TextBlock Grid.Column="2" x:Name="TxtScaleVal" Text="1.0x" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold"/>
                         </Grid>
                     </StackPanel>
                 </GroupBox>
 
                 <!-- SECTION 3: AUTO-HIDE & IDLE BEHAVIOR -->
-                <GroupBox x:Name="GroupVisibility" Header="⏱️ Visibility, Auto-Hide &amp; Idle Retention" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
+                <GroupBox x:Name="GroupVisibility" Header="⏱️ Visibility, Auto-Hide &amp; Idle Retention" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Margin="0,0,0,14" Padding="12">
                     <StackPanel>
-                        <CheckBox x:Name="ChkAutoHide" Content="Auto-hide overlay when not typing (pops in as soon as you type)" Foreground="#F8FAFC" Margin="0,0,0,10"/>
+                        <CheckBox x:Name="ChkAutoHide" Content="Auto-hide overlay when not typing (pops in as soon as you type)" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,0,0,10"/>
 
                         <!-- Delay slider: Snapped strictly to 1-second whole integer increments -->
                         <Grid Margin="0,0,0,10">
@@ -195,37 +195,37 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="50"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Auto-Hide Delay:" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                            <TextBlock Text="Auto-Hide Delay:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                             <Slider Grid.Column="1" x:Name="SliderHideDelay" Minimum="1" Maximum="15" Value="4" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="1" ValueChanged="SliderHideDelay_ValueChanged"/>
-                            <TextBlock Grid.Column="2" x:Name="TxtDelayVal" Text="4s" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F8FAFC" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="2" x:Name="TxtDelayVal" Text="4s" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppAccentBrush}" FontWeight="Bold"/>
                         </Grid>
 
                         <!-- Idle retention description -->
-                        <TextBlock Text="💡 Idle Retention: When idle, the overlay retains and shows your last active session speed and peak burst rather than resetting to a flat 0." FontSize="11" Foreground="#64748B" TextWrapping="Wrap"/>
+                        <TextBlock Text="💡 Idle Retention: When idle, the overlay retains and shows your last active session speed and peak burst rather than resetting to a flat 0." FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </GroupBox>
 
-                <!-- SECTION 4: METRICS TOGGLE & SKETCH LAYOUT -->
-                <GroupBox x:Name="GroupMetrics" Header="📊 Visible Metric Chips (Configure Layout)" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
+                <!-- SECTION 4: METRICS TOGGLE -->
+                <GroupBox x:Name="GroupMetrics" Header="📊 Visible Metric Chips (Configure Layout)" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Margin="0,0,0,14" Padding="12">
                     <StackPanel>
-                        <TextBlock Text="Toggle on/off any metric from your layout:" Foreground="#94A3B8" Margin="0,0,0,8"/>
+                        <TextBlock Text="Toggle on/off any metric from your layout:" Foreground="{DynamicResource AppTextSecondaryBrush}" Margin="0,0,0,8"/>
                         <WrapPanel>
-                            <CheckBox x:Name="Chk15s" Content="15s Rolling WPM" Foreground="#F8FAFC" Width="145" Margin="0,4,10,4"/>
-                            <CheckBox x:Name="Chk30s" Content="30s Rolling WPM" Foreground="#F8FAFC" Width="145" Margin="0,4,10,4"/>
-                            <CheckBox x:Name="Chk60s" Content="60s Rolling WPM" Foreground="#F8FAFC" Width="145" Margin="0,4,10,4"/>
-                            <CheckBox x:Name="Chk5m" Content="5m Sustained WPM" Foreground="#F8FAFC" Width="145" Margin="0,4,10,4"/>
-                            <CheckBox x:Name="ChkTop" Content="Top WPM Record" Foreground="#F8FAFC" Width="145" Margin="0,4,10,4"/>
-                            <CheckBox x:Name="ChkAvg" Content="Average WPM" Foreground="#F8FAFC" Width="145" Margin="0,4,10,4"/>
-                            <CheckBox x:Name="ChkLast" Content="Last Session WPM" Foreground="#F8FAFC" Width="145" Margin="0,4,10,4"/>
+                            <CheckBox x:Name="Chk15s" Content="15s Rolling WPM" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="145" Margin="0,4,10,4"/>
+                            <CheckBox x:Name="Chk30s" Content="30s Rolling WPM" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="145" Margin="0,4,10,4"/>
+                            <CheckBox x:Name="Chk60s" Content="60s Rolling WPM" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="145" Margin="0,4,10,4"/>
+                            <CheckBox x:Name="Chk5m" Content="5m Sustained WPM" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="145" Margin="0,4,10,4"/>
+                            <CheckBox x:Name="ChkTop" Content="Top WPM Record" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="145" Margin="0,4,10,4"/>
+                            <CheckBox x:Name="ChkAvg" Content="Average WPM" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="145" Margin="0,4,10,4"/>
+                            <CheckBox x:Name="ChkLast" Content="Last Session WPM" Foreground="{DynamicResource AppTextPrimaryBrush}" Width="145" Margin="0,4,10,4"/>
                         </WrapPanel>
                     </StackPanel>
                 </GroupBox>
 
-                <!-- SECTION 5: ACCURACY, PENALTY WITH HELP EXPLANATION -->
-                <GroupBox x:Name="GroupAccuracy" Header="🚀 System &amp; Net Accuracy" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,10" Padding="12">
+                <!-- SECTION 5: ACCURACY & PENALTY -->
+                <GroupBox x:Name="GroupAccuracy" Header="🚀 System &amp; Net Accuracy" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Margin="0,0,0,10" Padding="12">
                     <StackPanel>
-                        <CheckBox x:Name="ChkStartWindows" Content="Start automatically with Windows (background boot)" Foreground="#F8FAFC" Margin="0,0,0,8"/>
-                        <CheckBox x:Name="ChkAlwaysOnTop" Content="Always keep overlay on top of other windows" Foreground="#F8FAFC" Margin="0,0,0,10"/>
+                        <CheckBox x:Name="ChkStartWindows" Content="Start automatically with Windows (background boot)" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ChkAlwaysOnTop" Content="Always keep overlay on top of other windows" Foreground="{DynamicResource AppTextPrimaryBrush}" Margin="0,0,0,10"/>
 
                         <!-- Backspace penalty with Help Icon -->
                         <Grid Margin="0,0,0,6">
@@ -235,46 +235,46 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="50"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Error Correction Penalty:" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                            <TextBlock Grid.Column="0" Text="Error Correction Penalty:" VerticalAlignment="Center" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                             
                             <!-- Help Icon Button with Tooltip -->
-                            <Border Grid.Column="1" Width="18" Height="18" CornerRadius="9" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1" Margin="6,0,12,0" Cursor="Help">
+                            <Border Grid.Column="1" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource AppSurfaceElevatedBrush}" BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="1" Margin="6,0,12,0" Cursor="Help">
                                 <Border.ToolTip>
-                                    <ToolTip Background="#0F172A" BorderBrush="#38BDF8" BorderThickness="1" Padding="12" Foreground="#F8FAFC" MaxWidth="360">
+                                    <ToolTip Background="{DynamicResource AppSurfaceBrush}" BorderBrush="{DynamicResource AppAccentBrush}" BorderThickness="1.5" Padding="12" Foreground="{DynamicResource AppTextPrimaryBrush}" MaxWidth="360">
                                         <StackPanel>
-                                            <TextBlock Text="ℹ️ How Error Penalty Works" FontWeight="Bold" FontSize="13" Foreground="#38BDF8" Margin="0,0,0,6"/>
-                                            <TextBlock Text="When you make a typing mistake and delete it using Backspace, this penalty ensures errors don't artificially inflate your speed:" FontSize="11.5" Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                                            <TextBlock Text="• 0.5x (Lenient): Softer penalty, forgiving for beginner practice." FontSize="11" Foreground="#94A3B8" Margin="0,0,0,2"/>
-                                            <TextBlock Text="• 1.0x (Standard - Recommended): Deducts the erased character plus penalizes the wasted keystroke." FontSize="11" Foreground="#34D399" Margin="0,0,0,2"/>
-                                            <TextBlock Text="• 1.5x - 2.0x (Strict Practice): Heavily penalizes typos to train 100% accuracy and muscle memory." FontSize="11" Foreground="#F87171" Margin="0,0,0,6"/>
-                                            <TextBlock Text="Formula: Net Words = (Typed - (Backspaces × (1 + Penalty))) / 5" FontSize="10.5" FontFamily="Consolas" Foreground="#38BDF8"/>
+                                            <TextBlock Text="ℹ️ How Error Penalty Works" FontWeight="Bold" FontSize="13" Foreground="{DynamicResource AppAccentBrush}" Margin="0,0,0,6"/>
+                                            <TextBlock Text="When you make a typing mistake and delete it using Backspace, this penalty ensures errors don't artificially inflate your speed:" FontSize="11.5" Foreground="{DynamicResource AppTextPrimaryBrush}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                                            <TextBlock Text="• 0.5x (Lenient): Softer penalty, forgiving for beginner practice." FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock Text="• 1.0x (Standard - Recommended): Deducts the erased character plus penalizes the wasted keystroke." FontSize="11" Foreground="{DynamicResource AppHighlightBrush}" Margin="0,0,0,2"/>
+                                            <TextBlock Text="• 1.5x - 2.0x (Strict Practice): Heavily penalizes typos to train 100% accuracy and muscle memory." FontSize="11" Foreground="#EF4444" Margin="0,0,0,6"/>
+                                            <TextBlock Text="Formula: Net Words = (Typed - (Backspaces × (1 + Penalty))) / 5" FontSize="10.5" FontFamily="Consolas" Foreground="{DynamicResource AppAccentBrush}"/>
                                         </StackPanel>
                                     </ToolTip>
                                 </Border.ToolTip>
-                                <TextBlock Text="?" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Text="?" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
 
                             <Slider Grid.Column="2" x:Name="SliderPenalty" Minimum="0.5" Maximum="2.0" Value="1.0" SmallChange="0.25" LargeChange="0.5" ValueChanged="SliderPenalty_ValueChanged"/>
-                            <TextBlock Grid.Column="3" x:Name="TxtPenaltyVal" Text="1.0x" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F8FAFC" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="3" x:Name="TxtPenaltyVal" Text="1.0x" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource AppAccentBrush}" FontWeight="SemiBold"/>
                         </Grid>
 
-                        <TextBlock Text="Hover over the [?] above to see how backspace penalties train typing precision." FontSize="11" Foreground="#64748B"/>
+                        <TextBlock Text="Hover over the [?] above to see how backspace penalties train typing precision." FontSize="11" Foreground="{DynamicResource AppTextSecondaryBrush}"/>
                     </StackPanel>
                 </GroupBox>
 
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Footer Actions: SEPARATE APPLY, SAVE & CLOSE, AND CANCEL -->
+        <!-- Footer Actions -->
         <Grid Grid.Row="2" Margin="0,12,0,0">
-            <Button Content="Reset Defaults" Click="ResetDefaults_Click" HorizontalAlignment="Left" Padding="12,6" Background="#1E2536" Foreground="#94A3B8" BorderBrush="#334155" Cursor="Hand"/>
+            <Button Content="Reset Defaults" Click="ResetDefaults_Click" HorizontalAlignment="Left" Padding="12,6" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppTextSecondaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <!-- Live Apply Button: test theme directly on screen -->
-                <Button Content="👁️ Apply Now" Click="Apply_Click" Padding="14,6" Margin="0,0,10,0" Background="#1E293B" Foreground="#38BDF8" BorderBrush="#0284C7" Cursor="Hand" FontWeight="SemiBold" ToolTip="Preview changes live on the floating overlay without closing this dialog"/>
+                <!-- Live Apply Button -->
+                <Button Content="👁️ Apply Now" Click="Apply_Click" Padding="14,6" Margin="0,0,10,0" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppAccentBrush}" Cursor="Hand" FontWeight="SemiBold" ToolTip="Preview changes live on the floating overlay without closing this dialog"/>
                 <!-- Save & Close -->
-                <Button Content="💾 Save &amp; Close" Click="SaveClose_Click" Padding="18,6" Margin="0,0,10,0" Background="#2563EB" Foreground="#FFFFFF" BorderBrush="#3B82F6" Cursor="Hand" FontWeight="SemiBold"/>
+                <Button Content="💾 Save &amp; Close" Click="SaveClose_Click" Padding="18,6" Margin="0,0,10,0" Background="{DynamicResource AppAccentBrush}" Foreground="{DynamicResource AppTextOnAccentBrush}" BorderBrush="{DynamicResource AppAccentBrush}" Cursor="Hand" FontWeight="SemiBold"/>
                 <!-- Cancel -->
-                <Button Content="Cancel" Click="Cancel_Click" Padding="14,6" Background="#1E2536" Foreground="#94A3B8" BorderBrush="#334155" Cursor="Hand"/>
+                <Button Content="Cancel" Click="Cancel_Click" Padding="14,6" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppTextSecondaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
             </StackPanel>
         </Grid>
     </Grid>
