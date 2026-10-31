@@ -104,14 +104,54 @@ namespace WPMOverlay.Views
                 var textSecondary = (WpfColor)WpfColorConverter.ConvertFromString(_tempSettings.TextSecondaryHex);
                 var highlight = (WpfColor)WpfColorConverter.ConvertFromString(_tempSettings.HighlightHex);
 
-                PreviewBorder.Background = new SolidColorBrush(bg);
-                PreviewBorder.BorderBrush = new SolidColorBrush(border);
+                // Dynamically adapt the entire SettingsWindow surface
+                if (_tempSettings.ThemePreset == "LightBlue")
+                {
+                    Background = new SolidColorBrush(WpfColor.FromRgb(240, 246, 252));
+                    HeaderTitle.Foreground = new SolidColorBrush(WpfColor.FromRgb(15, 23, 42));
+                }
+                else
+                {
+                    Background = new SolidColorBrush(WpfColor.FromRgb(bg.R, bg.G, bg.B));
+                    HeaderTitle.Foreground = new SolidColorBrush(WpfColor.FromRgb(248, 250, 252));
+                }
 
-                TxtPreviewTitle.Foreground = new SolidColorBrush(accent);
-                TxtPreviewSub.Foreground = new SolidColorBrush(textPrimary);
+                var accentBrush = new SolidColorBrush(accent);
+                var borderBrush = new SolidColorBrush(border);
+                var textSecBrush = new SolidColorBrush(textSecondary);
+                var textPrimBrush = new SolidColorBrush(textPrimary);
+
+                GroupThemes.Foreground = accentBrush;
+                GroupThemes.BorderBrush = borderBrush;
+                GroupSize.Foreground = accentBrush;
+                GroupSize.BorderBrush = borderBrush;
+                GroupVisibility.Foreground = accentBrush;
+                GroupVisibility.BorderBrush = borderBrush;
+                GroupMetrics.Foreground = accentBrush;
+                GroupMetrics.BorderBrush = borderBrush;
+                GroupAccuracy.Foreground = accentBrush;
+                GroupAccuracy.BorderBrush = borderBrush;
+
+                ChkAutoHide.Foreground = textPrimBrush;
+                Chk15s.Foreground = textPrimBrush;
+                Chk30s.Foreground = textPrimBrush;
+                Chk60s.Foreground = textPrimBrush;
+                Chk5m.Foreground = textPrimBrush;
+                ChkTop.Foreground = textPrimBrush;
+                ChkAvg.Foreground = textPrimBrush;
+                ChkLast.Foreground = textPrimBrush;
+                ChkStartWindows.Foreground = textPrimBrush;
+                ChkAlwaysOnTop.Foreground = textPrimBrush;
+
+                // Live Preview Swatch
+                PreviewBorder.Background = new SolidColorBrush(bg);
+                PreviewBorder.BorderBrush = borderBrush;
+
+                TxtPreviewTitle.Foreground = accentBrush;
+                TxtPreviewSub.Foreground = textPrimBrush;
 
                 PreviewBadge.Background = new SolidColorBrush(highlight);
-                TxtPreviewBadge.Foreground = new SolidColorBrush(WpfColor.FromRgb(15, 23, 42)); // High-contrast dark text on bright badge
+                TxtPreviewBadge.Foreground = new SolidColorBrush(WpfColor.FromRgb(15, 23, 42));
             }
             catch (Exception ex)
             {
@@ -126,6 +166,9 @@ namespace WPMOverlay.Views
                 string preset = (string)selected.Tag;
                 _tempSettings.ApplyThemePreset(preset);
                 UpdatePreviewSwatch();
+
+                // Live-update the floating overlay on screen immediately!
+                _settingsService.UpdateSettings(s => CommitToSettings(s));
             }
         }
 

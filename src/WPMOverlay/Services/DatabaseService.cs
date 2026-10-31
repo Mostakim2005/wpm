@@ -36,6 +36,11 @@ namespace WPMOverlay.Services
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
 
+            using (var pragmaCmd = new SqliteCommand("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;", connection))
+            {
+                pragmaCmd.ExecuteNonQuery();
+            }
+
             string createTablesSql = @"
                 CREATE TABLE IF NOT EXISTS sessions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

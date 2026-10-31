@@ -21,6 +21,7 @@ namespace WPMOverlay.Views
         private Forms.NotifyIcon? _trayIcon;
         private bool _isHovered = false;
         private bool _isExplicitlyHidden = false;
+        private bool _isSettingsOpen = false;
 
         public MainWindow()
         {
@@ -213,6 +214,7 @@ namespace WPMOverlay.Views
 
         private void OnMetricsUpdated()
         {
+            if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
             Dispatcher.Invoke(UpdateVisuals);
         }
 
@@ -272,6 +274,7 @@ namespace WPMOverlay.Views
 
         private void OnTypingStarted()
         {
+            if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
             Dispatcher.Invoke(() =>
             {
                 if (_isExplicitlyHidden) return;
@@ -289,9 +292,10 @@ namespace WPMOverlay.Views
 
         private void OnTypingIdle()
         {
+            if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
             Dispatcher.Invoke(() =>
             {
-                if (_isExplicitlyHidden || _isHovered) return;
+                if (_isExplicitlyHidden || _isHovered || _isSettingsOpen) return;
 
                 if (_settingsService.CurrentSettings.AutoHideEnabled)
                 {
@@ -391,10 +395,24 @@ namespace WPMOverlay.Views
 
         private void OpenSettingsWindow()
         {
+            _isSettingsOpen = true;
+
+            // Stop any ongoing fade-out and guarantee overlay is 100% visible on screen while configuring
+            BeginAnimation(OpacityProperty, null);
+            Opacity = _settingsService.CurrentSettings.WindowOpacity;
+
             var settingsWin = new SettingsWindow(_settingsService);
             settingsWin.Owner = this;
             settingsWin.ShowDialog();
+
+            _isSettingsOpen = false;
+
             ApplySettings(_settingsService.CurrentSettings);
+
+            if (!_typingEngine.IsTypingActive && _settingsService.CurrentSettings.AutoHideEnabled && !_isExplicitlyHidden)
+            {
+                OnTypingIdle();
+            }
         }
 
         private void ExitApplication()

@@ -51,3 +51,23 @@ This document records defects identified during development, compilation, and te
   3. Replaced floating-point slider increments with strict 1-second snaps (`Minimum="1"`, `Maximum="15"`, `TickFrequency="1"`) formatted purely as integers (`$"{val}s"`).
 - **Code Anchors**: [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L12-L95), [`SettingsWindow.xaml.cs`](file:///src/WPMOverlay/Views/SettingsWindow.xaml.cs#L75-L125), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L71-L90), [`WPMOverlay.csproj`](file:///src/WPMOverlay/WPMOverlay.csproj#L9-L15).
 
+---
+
+## 4. Overlay Fade-out During Settings Dialog & Static Settings Dialog Surface
+
+- **Issue Symptom**: 
+  1. Changing themes in Settings seemed to do nothing because the floating HUD on screen was at `Opacity = 0.0` (faded out due to user inactivity while navigating dialogs).
+  2. The `SettingsWindow` itself had a hardcoded `#0F1117` background, remaining dark even when `LightBlue` or other themes were chosen.
+  3. System tray icon contrast at small scale (16x16 / 24x24) was blurry when downscaled by standard anti-aliasing.
+- **Root Cause Analysis (RCA)**:
+  1. The overlay's auto-hide timer continued running and completed a fade-out animation while the modal Settings dialog was open, leaving the target HUD completely invisible.
+  2. `SettingsWindow` lacked tokenized dynamic styling for its own window surface, group boxes, and labels.
+  3. Small 16x16 Windows notification icons require manual pixel grid alignment rather than high-radius curves and downscaled fonts.
+- **Resolution Strategy**:
+  1. Introduced `_isSettingsOpen` state flag in `MainWindow.xaml.cs` that suppresses auto-hide and halts fade-out animations, holding the overlay 100% visible while settings are adjusted.
+  2. Wired `CmbPreset_SelectionChanged` to immediately update both the `SettingsWindow` surface (turning `#F0F6FC` ice-blue for `LightBlue`, etc.) and the live desktop HUD simultaneously.
+  3. Crafted pixel-perfect bitmap glyphs for 16x16 with pure white high-contrast block lettering for "WPM" and an emerald speed line.
+  4. Enabled `PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;` in SQLite to ensure concurrent read/write stability during burst typing.
+- **Code Anchors**: [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L22-L25), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L396-L415), [`SettingsWindow.xaml.cs`](file:///src/WPMOverlay/Views/SettingsWindow.xaml.cs#L100-L165), [`DatabaseService.cs`](file:///src/WPMOverlay/Services/DatabaseService.cs#L35-L42).
+
+

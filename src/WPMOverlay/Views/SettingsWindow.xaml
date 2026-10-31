@@ -108,13 +108,13 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <TextBlock Grid.Row="0" Text="⚙️ Overlay Settings &amp; Personalization" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
+        <TextBlock x:Name="HeaderTitle" Grid.Row="0" Text="⚙️ Overlay Settings &amp; Personalization" FontSize="20" FontWeight="Bold" Margin="0,0,0,16"/>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="0,0,10,0">
 
                 <!-- SECTION 1: ADAPTIVE THEMES (NO MANUAL HEX) -->
-                <GroupBox Header="🎨 Adaptive Themes (Color Theory Systems)" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
+                <GroupBox x:Name="GroupThemes" Header="🎨 Adaptive Themes (Color Theory Systems)" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
                     <StackPanel>
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
@@ -155,7 +155,7 @@
                 </GroupBox>
 
                 <!-- SECTION 2: DIMENSIONS & TRANSPARENCY -->
-                <GroupBox Header="📐 Size, Scaling &amp; Transparency" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
+                <GroupBox x:Name="GroupSize" Header="📐 Size, Scaling &amp; Transparency" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
                     <StackPanel>
                         <!-- Opacity -->
                         <Grid Margin="0,0,0,10">
@@ -184,7 +184,7 @@
                 </GroupBox>
 
                 <!-- SECTION 3: AUTO-HIDE & IDLE BEHAVIOR -->
-                <GroupBox Header="⏱️ Visibility, Auto-Hide &amp; Idle Retention" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
+                <GroupBox x:Name="GroupVisibility" Header="⏱️ Visibility, Auto-Hide &amp; Idle Retention" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
                     <StackPanel>
                         <CheckBox x:Name="ChkAutoHide" Content="Auto-hide overlay when not typing (pops in as soon as you type)" Foreground="#F8FAFC" Margin="0,0,0,10"/>
 
@@ -206,7 +206,7 @@
                 </GroupBox>
 
                 <!-- SECTION 4: METRICS TOGGLE & SKETCH LAYOUT -->
-                <GroupBox Header="📊 Visible Metric Chips (Configure Layout)" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
+                <GroupBox x:Name="GroupMetrics" Header="📊 Visible Metric Chips (Configure Layout)" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,14" Padding="12">
                     <StackPanel>
                         <TextBlock Text="Toggle on/off any metric from your layout:" Foreground="#94A3B8" Margin="0,0,0,8"/>
                         <WrapPanel>
@@ -222,7 +222,7 @@
                 </GroupBox>
 
                 <!-- SECTION 5: ACCURACY, PENALTY WITH HELP EXPLANATION -->
-                <GroupBox Header="🚀 System &amp; Net Accuracy" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,10" Padding="12">
+                <GroupBox x:Name="GroupAccuracy" Header="🚀 System &amp; Net Accuracy" Foreground="#38BDF8" BorderBrush="#262D3D" Margin="0,0,0,10" Padding="12">
                     <StackPanel>
                         <CheckBox x:Name="ChkStartWindows" Content="Start automatically with Windows (background boot)" Foreground="#F8FAFC" Margin="0,0,0,8"/>
                         <CheckBox x:Name="ChkAlwaysOnTop" Content="Always keep overlay on top of other windows" Foreground="#F8FAFC" Margin="0,0,0,10"/>
