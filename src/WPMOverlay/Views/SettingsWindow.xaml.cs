@@ -10,13 +10,14 @@ namespace WPMOverlay.Views
     {
         private readonly SettingsService _settingsService;
         private readonly AppSettings _tempSettings;
+        private bool _isInitializing = true;
 
         public SettingsWindow(SettingsService settingsService)
         {
-            InitializeComponent();
             _settingsService = settingsService;
 
-            // Clone settings to temp
+            // Clone settings to temp BEFORE calling InitializeComponent()
+            // to prevent NullReferenceException during XAML slider ValueChanged deserialization
             var current = _settingsService.CurrentSettings;
             _tempSettings = new AppSettings
             {
@@ -43,6 +44,9 @@ namespace WPMOverlay.Views
                 StartWithWindows = current.StartWithWindows,
                 ErrorPenaltyMultiplier = current.ErrorPenaltyMultiplier
             };
+
+            InitializeComponent();
+            _isInitializing = false;
 
             Loaded += SettingsWindow_Loaded;
         }
@@ -93,6 +97,8 @@ namespace WPMOverlay.Views
 
         private void CmbPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_isInitializing || _tempSettings == null) return;
+
             if (CmbPreset.SelectedItem is ComboBoxItem selected)
             {
                 string preset = (string)selected.Tag;
@@ -105,6 +111,8 @@ namespace WPMOverlay.Views
         {
             if (TxtOpacityVal != null)
                 TxtOpacityVal.Text = $"{Math.Round(e.NewValue * 100)}%";
+
+            if (_isInitializing || _tempSettings == null) return;
             _tempSettings.WindowOpacity = e.NewValue;
         }
 
@@ -112,6 +120,8 @@ namespace WPMOverlay.Views
         {
             if (TxtScaleVal != null)
                 TxtScaleVal.Text = $"{e.NewValue:F1}x";
+
+            if (_isInitializing || _tempSettings == null) return;
             _tempSettings.ScaleFactor = e.NewValue;
         }
 
@@ -119,6 +129,8 @@ namespace WPMOverlay.Views
         {
             if (TxtDelayVal != null)
                 TxtDelayVal.Text = $"{Math.Round(e.NewValue)}s";
+
+            if (_isInitializing || _tempSettings == null) return;
             _tempSettings.AutoHideDelaySeconds = Math.Round(e.NewValue);
         }
 
@@ -126,6 +138,8 @@ namespace WPMOverlay.Views
         {
             if (TxtPenaltyVal != null)
                 TxtPenaltyVal.Text = $"{e.NewValue:F1}x";
+
+            if (_isInitializing || _tempSettings == null) return;
             _tempSettings.ErrorPenaltyMultiplier = e.NewValue;
         }
 

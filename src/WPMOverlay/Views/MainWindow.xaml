@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="WPM Overlay"
-        Icon="pack://application:,,,/app_icon.ico"
+        Icon="pack://application:,,,/WPMOverlay;component/app_icon.ico"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"

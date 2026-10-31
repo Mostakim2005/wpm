@@ -75,19 +75,22 @@ This document records defects identified during development, compilation, and te
 - **Code Anchors**: [`ThemeManager.cs`](file:///src/WPMOverlay/Services/ThemeManager.cs#L12-L85), [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L190-L205), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L36-L45), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L295-L315), [`TypingEngine.cs`](file:///src/WPMOverlay/Services/TypingEngine.cs#L105-L180).
 
 
-- **Issue Symptom**: 
-  1. Changing themes in Settings seemed to do nothing because the floating HUD on screen was at `Opacity = 0.0` (faded out due to user inactivity while navigating dialogs).
-  2. The `SettingsWindow` itself had a hardcoded `#0F1117` background, remaining dark even when `LightBlue` or other themes were chosen.
-  3. System tray icon contrast at small scale (16x16 / 24x24) was blurry when downscaled by standard anti-aliasing.
+---
+
+## 6. NullReferenceException during SettingsWindow Initialization & Cross-Assembly Pack URI Resolution
+
+- **Issue Symptom**:
+  1. Opening Settings from either the HUD right-click menu or the system tray menu crashed or threw `System.NullReferenceException: Object reference not set to an instance of an object at WPMOverlay.Views.SettingsWindow.SliderOpacity_ValueChanged`.
+  2. The floating overlay hid or disappeared upon right-clicking Settings because the unhandled exception aborted execution.
+  3. Unit test runners crashed when loading XAML components with `System.IO.IOException: Cannot locate resource 'app_icon.ico'`.
 - **Root Cause Analysis (RCA)**:
-  1. The overlay's auto-hide timer continued running and completed a fade-out animation while the modal Settings dialog was open, leaving the target HUD completely invisible.
-  2. `SettingsWindow` lacked tokenized dynamic styling for its own window surface, group boxes, and labels.
-  3. Small 16x16 Windows notification icons require manual pixel grid alignment rather than high-radius curves and downscaled fonts.
+  1. In WPF, during `InitializeComponent()`, setting `Minimum="0.4"` on `SliderOpacity` in XAML coerces `Value` and immediately raises the `ValueChanged` routed event before constructor execution finishes. `_tempSettings` was being instantiated *after* `InitializeComponent()`, leaving `_tempSettings` null when `SliderOpacity_ValueChanged` executed `_tempSettings.WindowOpacity = e.NewValue;`.
+  2. `pack://application:,,,/app_icon.ico` assumes the active executing entry assembly is `WPMOverlay.exe`. When instantiated from secondary assemblies or test runners (`testhost.exe`), WPF fails to locate the resource unless explicitly qualified with the component assembly name (`/WPMOverlay;component/...`).
 - **Resolution Strategy**:
-  1. Introduced `_isSettingsOpen` state flag in `MainWindow.xaml.cs` that suppresses auto-hide and halts fade-out animations, holding the overlay 100% visible while settings are adjusted.
-  2. Wired `CmbPreset_SelectionChanged` to immediately update both the `SettingsWindow` surface (turning `#F0F6FC` ice-blue for `LightBlue`, etc.) and the live desktop HUD simultaneously.
-  3. Crafted pixel-perfect bitmap glyphs for 16x16 with pure white high-contrast block lettering for "WPM" and an emerald speed line.
-  4. Enabled `PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;` in SQLite to ensure concurrent read/write stability during burst typing.
-- **Code Anchors**: [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L22-L25), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L396-L415), [`SettingsWindow.xaml.cs`](file:///src/WPMOverlay/Views/SettingsWindow.xaml.cs#L100-L165), [`DatabaseService.cs`](file:///src/WPMOverlay/Services/DatabaseService.cs#L35-L42).
+  1. **Pre-Initialization Cloning & Guard Flags**: Instantiated `_tempSettings` *before* `InitializeComponent()` in [`SettingsWindow.xaml.cs`](file:///src/WPMOverlay/Views/SettingsWindow.xaml.cs#L18-L45) and introduced `_isInitializing = true;` flag alongside null guards (`if (_isInitializing || _tempSettings == null) return;`) across all slider and combobox event handlers.
+  2. **Try/Catch/Finally Safeguards**: Wrapped dialog openings in [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L375-L420) within structured error handlers, ensuring `_isSettingsOpen = false;` executes in `finally` and never leaves the overlay in a locked/hidden state.
+  3. **Universal Pack URIs**: Updated all window icons to `pack://application:,,,/WPMOverlay;component/app_icon.ico`.
+  4. **Automated Unit Testing**: Added [`SettingsWindow_Instantiation_DoesNotThrowNullReferenceException`](file:///tests/WPMOverlay.Tests/TypingEngineTests.cs#L185-L205) running on an STA thread to continuously guard against regression.
+- **Code Anchors**: [`SettingsWindow.xaml.cs`](file:///src/WPMOverlay/Views/SettingsWindow.xaml.cs#L18-L50), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L380-L415), [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L5), [`HistoryWindow.xaml`](file:///src/WPMOverlay/Views/HistoryWindow.xaml#L5).
 
 

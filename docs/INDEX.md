@@ -24,4 +24,4 @@ Welcome to the **WPM Overlay** documentation. This project follows the Token-Pre
 - **Configuration & Dynamic Theme Engine**: [`AppSettings.cs`](file:///src/WPMOverlay/Models/AppSettings.cs), [`ThemeManager.cs`](file:///src/WPMOverlay/Services/ThemeManager.cs), [`SettingsService.cs`](file:///src/WPMOverlay/Services/SettingsService.cs)
 - **History & Analytics Dashboard**: [`HistoryWindow.xaml`](file:///src/WPMOverlay/Views/HistoryWindow.xaml)
 - **Settings & Personalization Dialog**: [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml)
-- **Standalone Portable Binary (v1.3.0)**: [`WPMOverlay-v1.3.0-Portable.exe`](file:///releases/WPMOverlay-v1.3.0-Portable.exe)
+- **Standalone Portable Binary (v1.3.1)**: [`WPMOverlay-v1.3.1-Portable.exe`](file:///releases/WPMOverlay-v1.3.1-Portable.exe)

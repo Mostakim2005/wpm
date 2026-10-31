@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using WPMOverlay.Models;
 using WPMOverlay.Services;
+using WPMOverlay.Views;
 using Xunit;
 
 namespace WPMOverlay.Tests
@@ -83,6 +84,57 @@ namespace WPMOverlay.Tests
         }
 
         [Fact]
+        public void DatabaseService_DeleteSession_RemovesRecordAndRecalculatesStats()
+        {
+            var db = new DatabaseService();
+
+            var session1 = new TypingSession
+            {
+                StartedAt = DateTime.UtcNow.AddMinutes(-10),
+                EndedAt = DateTime.UtcNow.AddMinutes(-9),
+                DurationSeconds = 60.0,
+                GrossKeystrokes = 200,
+                Backspaces = 0,
+                NetWords = 40.0,
+                AvgWpm = 40.0,
+                Peak15sWpm = 45.0,
+                Peak30sWpm = 42.0,
+                Peak60sWpm = 40.0,
+                AccuracyPercent = 100
+            };
+
+            var accidentalSpamSession = new TypingSession
+            {
+                StartedAt = DateTime.UtcNow.AddMinutes(-5),
+                EndedAt = DateTime.UtcNow.AddMinutes(-4),
+                DurationSeconds = 10.0,
+                GrossKeystrokes = 500,
+                Backspaces = 0,
+                NetWords = 100.0,
+                AvgWpm = 300.0,
+                Peak15sWpm = 350.0,
+                Peak30sWpm = 300.0,
+                Peak60sWpm = 250.0,
+                AccuracyPercent = 100
+            };
+
+            db.SaveSession(session1);
+            db.SaveSession(accidentalSpamSession);
+
+            var summaryBefore = db.GetStatsSummary();
+            Assert.True(summaryBefore.AllTimeTopWpm >= 350.0);
+
+            // Delete the accidental session
+            bool deleted = db.DeleteSession(accidentalSpamSession.Id);
+            Assert.True(deleted);
+
+            var summaryAfter = db.GetStatsSummary();
+            // All-Time Top should now be back down without the 350 WPM spam
+            var recent = db.GetRecentSessions(100);
+            Assert.DoesNotContain(recent, s => s.Id == accidentalSpamSession.Id);
+        }
+
+        [Fact]
         public void NetWpmCalculation_DeductsBackspacesAndErrorsCorrectly()
         {
             int grossChars = 250;
@@ -129,6 +181,29 @@ namespace WPMOverlay.Tests
             double sustainedWpm = totalWords / activeMinutes;
 
             Assert.Equal(60.0, Math.Round(sustainedWpm));
+        }
+
+        [Fact]
+        public void SettingsWindow_Instantiation_DoesNotThrowNullReferenceException()
+        {
+            var thread = new System.Threading.Thread(() =>
+            {
+                var settingsService = new SettingsService();
+                Exception? caught = null;
+                try
+                {
+                    var win = new SettingsWindow(settingsService);
+                    Assert.NotNull(win);
+                }
+                catch (Exception ex)
+                {
+                    caught = ex;
+                }
+                Assert.Null(caught);
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join();
         }
 
         [Fact]

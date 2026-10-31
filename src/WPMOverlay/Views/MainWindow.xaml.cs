@@ -86,7 +86,7 @@ namespace WPMOverlay.Views
             System.Drawing.Icon? customIcon = null;
             try
             {
-                var iconUri = new Uri("pack://application:,,,/app_icon.ico");
+                var iconUri = new Uri("pack://application:,,,/WPMOverlay;component/app_icon.ico");
                 var streamInfo = System.Windows.Application.GetResourceStream(iconUri);
                 if (streamInfo != null)
                 {
@@ -372,30 +372,48 @@ namespace WPMOverlay.Views
 
         private void OpenHistoryWindow()
         {
-            var historyWin = new HistoryWindow(_databaseService);
-            historyWin.Owner = this;
-            historyWin.ShowDialog();
-            _typingEngine.RefreshStatsSummary();
-            UpdateVisuals();
+            try
+            {
+                var historyWin = new HistoryWindow(_databaseService, _typingEngine);
+                historyWin.Owner = this;
+                historyWin.ShowDialog();
+                _typingEngine.RefreshStatsSummary();
+                UpdateVisuals();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error opening history window: {ex}");
+                System.Windows.MessageBox.Show($"Failed to open History: {ex.Message}", "History Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void OpenSettingsWindow()
         {
-            _isSettingsOpen = true;
-            _autoHideGraceTimer.Stop();
+            try
+            {
+                _isSettingsOpen = true;
+                _autoHideGraceTimer.Stop();
 
-            // Stop any ongoing fade-out and guarantee overlay is 100% visible on screen while configuring
-            BeginAnimation(OpacityProperty, null);
-            Opacity = _settingsService.CurrentSettings.WindowOpacity;
+                // Stop any ongoing fade-out and guarantee overlay is 100% visible on screen while configuring
+                BeginAnimation(OpacityProperty, null);
+                Opacity = _settingsService.CurrentSettings.WindowOpacity;
 
-            var settingsWin = new SettingsWindow(_settingsService);
-            settingsWin.Owner = this;
-            settingsWin.ShowDialog();
+                var settingsWin = new SettingsWindow(_settingsService);
+                settingsWin.Owner = this;
+                settingsWin.ShowDialog();
 
-            _isSettingsOpen = false;
-
-            ApplySettings(_settingsService.CurrentSettings);
-            TriggerAutoHideGracePeriod();
+                ApplySettings(_settingsService.CurrentSettings);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error opening settings window: {ex}");
+                System.Windows.MessageBox.Show($"Failed to open Settings: {ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isSettingsOpen = false;
+                TriggerAutoHideGracePeriod();
+            }
         }
 
         private void ExitApplication()

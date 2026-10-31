@@ -236,6 +236,53 @@ namespace WPMOverlay.Services
             return sessions;
         }
 
+        public bool DeleteSession(long id)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(_connectionString);
+                connection.Open();
+
+                using var cmd = new SqliteCommand("DELETE FROM sessions WHERE id = @id;", connection);
+                cmd.Parameters.AddWithValue("@id", id);
+                int rows = cmd.ExecuteNonQuery();
+                return rows > 0;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error deleting session {id}: {ex.Message}");
+                return false;
+            }
+        }
+
+        public int DeleteSessions(IEnumerable<long> ids)
+        {
+            int deletedCount = 0;
+            try
+            {
+                using var connection = new SqliteConnection(_connectionString);
+                connection.Open();
+                using var transaction = connection.BeginTransaction();
+
+                using var cmd = new SqliteCommand("DELETE FROM sessions WHERE id = @id;", connection, transaction);
+                var idParam = cmd.Parameters.Add("@id", SqliteType.Integer);
+
+                foreach (var id in ids)
+                {
+                    idParam.Value = id;
+                    deletedCount += cmd.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error batch deleting sessions: {ex.Message}");
+            }
+
+            return deletedCount;
+        }
+
         public void ClearHistory()
         {
             try
