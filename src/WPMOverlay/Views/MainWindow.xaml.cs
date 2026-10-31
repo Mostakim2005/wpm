@@ -168,6 +168,10 @@ namespace WPMOverlay.Views
                 Value60s.Foreground = textPrimary;
                 Unit60s.Foreground = textSecondary;
 
+                Label5m.Foreground = textSecondary;
+                Value5m.Foreground = accent;
+                Unit5m.Foreground = textSecondary;
+
                 // Right labels & values
                 LabelTop.Foreground = textSecondary;
                 ValueTop.Foreground = highlight;
@@ -192,6 +196,7 @@ namespace WPMOverlay.Views
             Row15s.Visibility = s.Show15s ? Visibility.Visible : Visibility.Collapsed;
             Row30s.Visibility = s.Show30s ? Visibility.Visible : Visibility.Collapsed;
             Row60s.Visibility = s.Show60s ? Visibility.Visible : Visibility.Collapsed;
+            Row5m.Visibility = s.Show5m ? Visibility.Visible : Visibility.Collapsed;
 
             RowTop.Visibility = s.ShowTop ? Visibility.Visible : Visibility.Collapsed;
             RowAvg.Visibility = s.ShowAvg ? Visibility.Visible : Visibility.Collapsed;
@@ -222,6 +227,7 @@ namespace WPMOverlay.Views
                 Value15s.Text = $"{Math.Round(_typingEngine.Current15sWpm)}";
                 Value30s.Text = $"{Math.Round(_typingEngine.Current30sWpm)}";
                 Value60s.Text = $"{Math.Round(_typingEngine.Current60sWpm)}";
+                Value5m.Text = $"{Math.Round(_typingEngine.Current5mWpm)}";
 
                 ValueTop.Text = $"{Math.Round(summary.AllTimeTopWpm)}";
                 ValueAvg.Text = $"{Math.Round(summary.OverallAvgWpm)}";
@@ -235,16 +241,17 @@ namespace WPMOverlay.Views
             }
             else
             {
-                // Idle state: RETENTION of last active session!
-                // Instead of 0 wpm flatline, show the last completed session speeds
+                // Idle state: RETENTION of last active session & sustained metrics!
                 double last15s = _typingEngine.LastFinished15sWpm > 0 ? _typingEngine.LastFinished15sWpm : summary.LastSession15sWpm;
                 double last30s = _typingEngine.LastFinished30sWpm > 0 ? _typingEngine.LastFinished30sWpm : summary.LastSession30sWpm;
                 double last60s = _typingEngine.LastFinished60sWpm > 0 ? _typingEngine.LastFinished60sWpm : summary.LastSession60sWpm;
                 double lastAvg = _typingEngine.LastFinishedAvgWpm > 0 ? _typingEngine.LastFinishedAvgWpm : summary.LastSessionWpm;
+                double last5m = _typingEngine.Current5mWpm > 0 ? _typingEngine.Current5mWpm : (_typingEngine.LastFinished5mWpm > 0 ? _typingEngine.LastFinished5mWpm : lastAvg);
 
                 Value15s.Text = $"{Math.Round(last15s)}";
                 Value30s.Text = $"{Math.Round(last30s)}";
                 Value60s.Text = $"{Math.Round(last60s)}";
+                Value5m.Text = $"{Math.Round(last5m)}";
 
                 ValueTop.Text = $"{Math.Round(summary.AllTimeTopWpm)}";
                 ValueAvg.Text = $"{Math.Round(summary.OverallAvgWpm)}";

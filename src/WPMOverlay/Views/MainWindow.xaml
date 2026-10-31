@@ -101,6 +101,19 @@
                                 <TextBlock Text=" wpm" x:Name="Unit60s" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
                             </StackPanel>
                         </Grid>
+
+                        <!-- 5m Sustained Average -->
+                        <Grid x:Name="Row5m" Margin="0,1,0,1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="34"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="5m:" x:Name="Label5m" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock x:Name="Value5m" Text="0" FontSize="13" FontWeight="Bold" FontFamily="Consolas, Segoe UI" VerticalAlignment="Center"/>
+                                <TextBlock Text=" wpm" x:Name="Unit5m" FontSize="11" Margin="2,0,0,0" VerticalAlignment="Center" Opacity="0.8"/>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
 
                     <!-- DIVIDER LINE -->

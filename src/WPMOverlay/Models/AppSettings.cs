@@ -8,7 +8,7 @@ namespace WPMOverlay.Models
 
         // Color Tokens (using color theory principles)
         public string BackgroundHex { get; set; } = "#EE12141A"; // Deep Charcoal with 93% opacity
-        public string BorderHex { get; set; } = "#3B82F6";       // Vibrant Blue border or subtle stroke
+        public string BorderHex { get; set; } = "#3B82F6";       // Vibrant Blue border
         public string AccentHex { get; set; } = "#38BDF8";       // Sky Blue (high contrast accent)
         public string TextPrimaryHex { get; set; } = "#F8FAFC";  // Slate 50
         public string TextSecondaryHex { get; set; } = "#94A3B8";// Slate 400
@@ -23,12 +23,13 @@ namespace WPMOverlay.Models
         // Auto-Hide & Idle Settings
         public bool AutoHideEnabled { get; set; } = true;
         public double AutoHideDelaySeconds { get; set; } = 4.0;
-        public string IdleDisplayMode { get; set; } = "ShowLastSession"; // "ShowLastSession" or "FadeOut"
+        public string IdleDisplayMode { get; set; } = "ShowLastSession";
 
         // Metric Toggles (Matching hand-drawn sketch)
         public bool Show15s { get; set; } = true;
         public bool Show30s { get; set; } = true;
         public bool Show60s { get; set; } = true;
+        public bool Show5m { get; set; } = true;
         public bool ShowTop { get; set; } = true;
         public bool ShowAvg { get; set; } = true;
         public bool ShowLast { get; set; } = true;
@@ -48,50 +49,86 @@ namespace WPMOverlay.Models
             ThemePreset = preset;
             switch (preset)
             {
+                case "LightBlue":
+                    BackgroundHex = "#F5F0F6FC"; // Crisp Ice Blue
+                    BorderHex = "#38BDF8";       // Sky Blue edge
+                    AccentHex = "#0284C7";       // Deep Ocean Blue
+                    TextPrimaryHex = "#0F172A";  // Dark Slate
+                    TextSecondaryHex = "#475569";// Medium Slate
+                    HighlightHex = "#059669";    // Forest Emerald
+                    break;
+
+                case "Glassmorphism":
+                    BackgroundHex = "#BA1E293B"; // Translucent Frosted Glass (73% alpha)
+                    BorderHex = "#60A5FA";       // Radiant Edge Glow
+                    AccentHex = "#38BDF8";       // Electric Cyan
+                    TextPrimaryHex = "#FFFFFF";  // Pure White
+                    TextSecondaryHex = "#CBD5E1";// Frosted Mist
+                    HighlightHex = "#4ADE80";    // Bright Lime
+                    break;
+
+                case "Obsidian":
+                    BackgroundHex = "#F01E1E22"; // Graphite Vault
+                    BorderHex = "#3E3E48";       // Cool Zinc
+                    AccentHex = "#818CF8";       // Soft Indigo
+                    TextPrimaryHex = "#F4F4F5";  // Crisp White
+                    TextSecondaryHex = "#A1A1AA";// Muted Zinc
+                    HighlightHex = "#A78BFA";    // Violet Glow
+                    break;
+
+                case "Material3Cyan":
+                    BackgroundHex = "#EE19222E"; // M3 Tonal Surface
+                    BorderHex = "#0284C7";       // M3 Primary Container Stroke
+                    AccentHex = "#38BDF8";       // M3 Primary Cyan
+                    TextPrimaryHex = "#E2E8F0";  // On-Surface White
+                    TextSecondaryHex = "#94A3B8";// On-Surface Variant
+                    HighlightHex = "#34D399";    // M3 Tertiary Mint
+                    break;
+
+                case "CyberpunkNeon":
+                    BackgroundHex = "#EE110E1F"; // Deep Neon Plum
+                    BorderHex = "#F43F5E";       // Hot Rose
+                    AccentHex = "#F43F5E";       // Hot Rose
+                    TextPrimaryHex = "#FFF1F2";  // Blush White
+                    TextSecondaryHex = "#FB7185";// Soft Rose
+                    HighlightHex = "#F59E0B";    // Neon Amber
+                    break;
+
                 case "OLEDMinimal":
-                    BackgroundHex = "#F5000000";
-                    BorderHex = "#27272A";
-                    AccentHex = "#E4E4E7";
-                    TextPrimaryHex = "#FFFFFF";
-                    TextSecondaryHex = "#71717A";
-                    HighlightHex = "#A1A1AA";
+                    BackgroundHex = "#F8000000"; // Absolute Black
+                    BorderHex = "#27272A";       // Subtle Zinc Edge
+                    AccentHex = "#E4E4E7";       // Platinum
+                    TextPrimaryHex = "#FFFFFF";  // Pure White
+                    TextSecondaryHex = "#71717A";// Muted Gray
+                    HighlightHex = "#A1A1AA";    // Silver
                     break;
 
                 case "MidnightBlue":
-                    BackgroundHex = "#F00F172A";
-                    BorderHex = "#1E293B";
-                    AccentHex = "#38BDF8";
-                    TextPrimaryHex = "#F8FAFC";
-                    TextSecondaryHex = "#64748B";
-                    HighlightHex = "#34D399";
+                    BackgroundHex = "#F00F172A"; // Navy Sapphire
+                    BorderHex = "#1E293B";       // Slate Blue Edge
+                    AccentHex = "#38BDF8";       // Sky Blue
+                    TextPrimaryHex = "#F8FAFC";  // Bright Slate
+                    TextSecondaryHex = "#64748B";// Slate Neutral
+                    HighlightHex = "#34D399";    // Mint Green
                     break;
 
                 case "EmeraldTerminal":
-                    BackgroundHex = "#F0051B11";
-                    BorderHex = "#064E3B";
-                    AccentHex = "#10B981";
-                    TextPrimaryHex = "#ECFDF5";
-                    TextSecondaryHex = "#6EE7B7";
-                    HighlightHex = "#34D399";
-                    break;
-
-                case "SunsetViolet":
-                    BackgroundHex = "#F0190D2E";
-                    BorderHex = "#3B1B54";
-                    AccentHex = "#A855F7";
-                    TextPrimaryHex = "#FAF5FF";
-                    TextSecondaryHex = "#C084FC";
-                    HighlightHex = "#F43F5E";
+                    BackgroundHex = "#F0051B11"; // Hacker Dark Green
+                    BorderHex = "#064E3B";       // Deep Pine
+                    AccentHex = "#10B981";       // Emerald Mint
+                    TextPrimaryHex = "#ECFDF5";  // Phosphor Green
+                    TextSecondaryHex = "#6EE7B7";// Soft Matrix
+                    HighlightHex = "#34D399";    // Neon Lime
                     break;
 
                 case "CyberDark":
                 default:
-                    BackgroundHex = "#EE12141A";
-                    BorderHex = "#2563EB";
-                    AccentHex = "#38BDF8";
-                    TextPrimaryHex = "#F8FAFC";
-                    TextSecondaryHex = "#94A3B8";
-                    HighlightHex = "#10B981";
+                    BackgroundHex = "#EE12141A"; // Balanced Slate
+                    BorderHex = "#2563EB";       // Vibrant Blue
+                    AccentHex = "#38BDF8";       // Cyan
+                    TextPrimaryHex = "#F8FAFC";  // Light Gray
+                    TextSecondaryHex = "#94A3B8";// Muted Gray
+                    HighlightHex = "#10B981";    // Emerald
                     break;
             }
         }

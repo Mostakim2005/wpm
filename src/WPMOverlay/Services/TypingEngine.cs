@@ -31,12 +31,14 @@ namespace WPMOverlay.Services
         public double LastFinished15sWpm { get; private set; } = 0;
         public double LastFinished30sWpm { get; private set; } = 0;
         public double LastFinished60sWpm { get; private set; } = 0;
+        public double LastFinished5mWpm { get; private set; } = 0;
         public double LastFinishedAccuracy { get; private set; } = 100;
 
         // Current Real-Time Metrics
         public double Current15sWpm { get; private set; } = 0;
         public double Current30sWpm { get; private set; } = 0;
         public double Current60sWpm { get; private set; } = 0;
+        public double Current5mWpm { get; private set; } = 0;
         public double CurrentInstantWpm { get; private set; } = 0;
         public double CurrentAccuracy { get; private set; } = 100;
         public bool IsTypingActive => _isSessionActive;
@@ -94,6 +96,7 @@ namespace WPMOverlay.Services
                 LastFinished15sWpm = CachedSummary.LastSession15sWpm;
                 LastFinished30sWpm = CachedSummary.LastSession30sWpm;
                 LastFinished60sWpm = CachedSummary.LastSession60sWpm;
+                LastFinished5mWpm = CachedSummary.LastSessionWpm;
             }
         }
 
@@ -138,12 +141,12 @@ namespace WPMOverlay.Services
 
             lock (_lock)
             {
-                // Prune events older than 65 seconds
-                DateTime cutoff = now.AddSeconds(-65);
+                // Prune events older than 310 seconds (5 min + 10s buffer)
+                DateTime cutoff = now.AddSeconds(-310);
                 _rollingBuffer.RemoveAll(k => k.Timestamp < cutoff);
 
                 double idleThreshold = _settingsService.CurrentSettings.AutoHideDelaySeconds;
-                if (idleThreshold < 2.0) idleThreshold = 2.0;
+                if (idleThreshold < 1.0) idleThreshold = 1.0;
 
                 // Check for idle transition
                 if (_isSessionActive && (now - _lastKeystrokeTime).TotalSeconds > idleThreshold)
@@ -152,13 +155,14 @@ namespace WPMOverlay.Services
                     TypingIdle?.Invoke();
                 }
 
+                double penalty = _settingsService.CurrentSettings.ErrorPenaltyMultiplier;
+
                 if (_isSessionActive)
                 {
-                    double penalty = _settingsService.CurrentSettings.ErrorPenaltyMultiplier;
-
                     Current15sWpm = CalculateWindowWpm(now, 15, penalty);
                     Current30sWpm = CalculateWindowWpm(now, 30, penalty);
                     Current60sWpm = CalculateWindowWpm(now, 60, penalty);
+                    Current5mWpm = CalculateSustained5mWpm(now, penalty);
                     CurrentInstantWpm = CalculateWindowWpm(now, 5, penalty);
 
                     if (Current15sWpm > _sessionPeak15s) _sessionPeak15s = Current15sWpm;
@@ -180,6 +184,8 @@ namespace WPMOverlay.Services
                 {
                     // Idle mode
                     CurrentInstantWpm = 0;
+                    // Recalculate recent sustained WPM in background
+                    Current5mWpm = CalculateSustained5mWpm(now, penalty);
                 }
             }
 
@@ -196,14 +202,10 @@ namespace WPMOverlay.Services
             int chars = windowKeys.Count(k => !k.IsBackspace);
             int backspaces = windowKeys.Count(k => k.IsBackspace);
 
-            // Net characters calculation:
-            // Each backspace removes a mistyped character plus applies the penalty
+            // Net characters calculation
             double netChars = Math.Max(0, chars - (backspaces * (1.0 + penalty)));
-
-            // Standard typing rate: 5 keystrokes = 1 word
             double words = netChars / 5.0;
 
-            // Determine actual time span to avoid over-estimating at the very beginning of typing
             double elapsedSeconds = (now - windowKeys.First().Timestamp).TotalSeconds;
             if (elapsedSeconds < 1.0) elapsedSeconds = 1.0;
             if (elapsedSeconds > windowSeconds) elapsedSeconds = windowSeconds;
@@ -212,13 +214,59 @@ namespace WPMOverlay.Services
             return minutes > 0 ? (words / minutes) : 0;
         }
 
+        private double CalculateSustained5mWpm(DateTime now, double penalty)
+        {
+            DateTime windowStart = now.AddSeconds(-300); // 5-minute sustained window
+            var windowKeys = _rollingBuffer.Where(k => k.Timestamp >= windowStart).OrderBy(k => k.Timestamp).ToList();
+
+            if (windowKeys.Count < 5) return LastFinished5mWpm > 0 ? LastFinished5mWpm : 0;
+
+            int chars = windowKeys.Count(k => !k.IsBackspace);
+            int backspaces = windowKeys.Count(k => k.IsBackspace);
+
+            double netChars = Math.Max(0, chars - (backspaces * (1.0 + penalty)));
+            double netWords = netChars / 5.0;
+
+            // Stitch active typing time across bursts:
+            // Any consecutive keystrokes separated by <= 3.5 seconds count as continuous typing.
+            // Gaps larger than 3.5 seconds represent pauses/reading and are NOT counted as active typing.
+            double activeSeconds = 0;
+            DateTime burstStart = windowKeys[0].Timestamp;
+            DateTime burstLast = windowKeys[0].Timestamp;
+
+            for (int i = 1; i < windowKeys.Count; i++)
+            {
+                var currentKeyTime = windowKeys[i].Timestamp;
+                double gap = (currentKeyTime - burstLast).TotalSeconds;
+
+                if (gap <= 3.5)
+                {
+                    burstLast = currentKeyTime;
+                }
+                else
+                {
+                    double burstDuration = Math.Max(1.0, (burstLast - burstStart).TotalSeconds);
+                    activeSeconds += burstDuration;
+
+                    burstStart = currentKeyTime;
+                    burstLast = currentKeyTime;
+                }
+            }
+
+            activeSeconds += Math.Max(1.0, (burstLast - burstStart).TotalSeconds);
+
+            if (activeSeconds < 2.0) activeSeconds = 2.0;
+            double activeMinutes = activeSeconds / 60.0;
+
+            return activeMinutes > 0 ? (netWords / activeMinutes) : 0;
+        }
+
         private void EndSession()
         {
             _isSessionActive = false;
 
             double duration = (_lastKeystrokeTime - _sessionStartTime).TotalSeconds;
 
-            // Only record sessions that have meaningful typing (at least 5 keystrokes and 1.5s)
             if (_sessionGrossKeys >= 5 && duration >= 1.5)
             {
                 double penalty = _settingsService.CurrentSettings.ErrorPenaltyMultiplier;
@@ -257,6 +305,7 @@ namespace WPMOverlay.Services
                 LastFinished15sWpm = _sessionPeak15s;
                 LastFinished30sWpm = _sessionPeak30s;
                 LastFinished60sWpm = _sessionPeak60s;
+                LastFinished5mWpm = Current5mWpm > 0 ? Current5mWpm : avgWpm;
                 LastFinishedAccuracy = accuracy;
 
                 RefreshStatsSummary();
@@ -274,6 +323,7 @@ namespace WPMOverlay.Services
                 Current15sWpm = 0;
                 Current30sWpm = 0;
                 Current60sWpm = 0;
+                Current5mWpm = 0;
                 CurrentInstantWpm = 0;
             }
             MetricsUpdated?.Invoke();

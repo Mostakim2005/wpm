@@ -11,6 +11,7 @@ This document inventories every feature in **WPM Overlay** with direct code anch
 | **Win32 Global Hook** | Low-level hook (`WH_KEYBOARD_LL`) for listening to keystrokes across all Windows apps. | [`KeyboardHook.cs`](file:///src/WPMOverlay/Services/KeyboardHook.cs#L45-L65) (`EnableHook`, `HookCallback`) |
 | **Modifier Filtering** | Ignores Shift, Ctrl, Alt, CapsLock, Win key from triggering typing count. | [`KeyboardHook.cs`](file:///src/WPMOverlay/Services/KeyboardHook.cs#L85-L105) (`IsIgnoredModifier`) |
 | **Rolling Windows** | Real-time sliding calculations for 15s, 30s, and 60s windows. | [`TypingEngine.cs`](file:///src/WPMOverlay/Services/TypingEngine.cs#L190-L215) (`CalculateWindowWpm`) |
+| **5m Sustained WPM** | Burst-stitching algorithm calculating 5-minute sustained typing speed across active sessions without pause penalties. | [`TypingEngine.cs`](file:///src/WPMOverlay/Services/TypingEngine.cs#L220-L270) (`CalculateSustained5mWpm`) |
 | **Net WPM & Accuracy** | Net characters formula deducting backspaces and applying error penalties. | [`TypingEngine.cs`](file:///src/WPMOverlay/Services/TypingEngine.cs#L170-L185) (`OnCalcTimerElapsed`) |
 | **Idle Retention** | Holds and shows the last session's active metrics when idle rather than flatlining to zero. | [`TypingEngine.cs`](file:///src/WPMOverlay/Services/TypingEngine.cs#L220-L270) (`EndSession`), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L220-L245) (`UpdateVisuals`) |
 
@@ -44,7 +45,9 @@ This document inventories every feature in **WPM Overlay** with direct code anch
 
 | Feature | Description | File Path & Code Anchor |
 | :--- | :--- | :--- |
-| **Theme Presets** | 5 color theory presets: CyberDark, OLEDMinimal, MidnightBlue, EmeraldTerminal, SunsetViolet. | [`AppSettings.cs`](file:///src/WPMOverlay/Models/AppSettings.cs#L45-L95) (`ApplyThemePreset`) |
-| **Metric Visibility** | Toggleable chips for 15s, 30s, 60s, Top, Avg, Last individually. | [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L110-L125), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L185-L195) |
+| **Theme Presets** | 9 adaptive color theory presets: CyberDark, LightBlue, Glassmorphism, Obsidian, Material3Cyan, CyberpunkNeon, EmeraldTerminal, MidnightBlue, OLEDMinimal. | [`AppSettings.cs`](file:///src/WPMOverlay/Models/AppSettings.cs#L45-L135) (`ApplyThemePreset`) |
+| **Live Apply & Preview** | Separate "Apply Now" button to see theme live on overlay before closing, plus in-dialog swatch preview. | [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L140-L155), [`SettingsWindow.xaml.cs`](file:///src/WPMOverlay/Views/SettingsWindow.xaml.cs#L180-L195) (`Apply_Click`) |
+| **Error Penalty Tooltip** | Interactive `[?]` help explaining error penalty weights (0.5x, 1.0x, 2.0x) and exact formulas. | [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L238-L255) |
+| **Metric Visibility** | Toggleable chips for 15s, 30s, 60s, 5m, Top, Avg, Last individually. | [`SettingsWindow.xaml`](file:///src/WPMOverlay/Views/SettingsWindow.xaml#L210-L225), [`MainWindow.xaml.cs`](file:///src/WPMOverlay/Views/MainWindow.xaml.cs#L190-L205) |
 | **Windows Startup** | Registry integration for starting automatically on Windows boot. | [`StartupManager.cs`](file:///src/WPMOverlay/Services/StartupManager.cs#L12-L45) (`SetStartup`, `IsStartupEnabled`) |
 | **Live Dynamic Updates** | Immediate reflection of modified settings in the running HUD without restarting. | [`SettingsService.cs`](file:///src/WPMOverlay/Services/SettingsService.cs#L60-L75) (`UpdateSettings`, `SettingsUpdated`) |

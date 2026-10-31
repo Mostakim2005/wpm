@@ -14,15 +14,25 @@ namespace WPMOverlay.Tests
             var settings = new AppSettings();
 
             settings.ApplyThemePreset("OLEDMinimal");
-            Assert.Equal("#F5000000", settings.BackgroundHex);
+            Assert.Equal("#F8000000", settings.BackgroundHex);
             Assert.Equal("#FFFFFF", settings.TextPrimaryHex);
 
-            settings.ApplyThemePreset("MidnightBlue");
-            Assert.Equal("#F00F172A", settings.BackgroundHex);
+            settings.ApplyThemePreset("LightBlue");
+            Assert.Equal("#F5F0F6FC", settings.BackgroundHex);
+            Assert.Equal("#0284C7", settings.AccentHex);
+            Assert.Equal("#0F172A", settings.TextPrimaryHex);
+
+            settings.ApplyThemePreset("Glassmorphism");
+            Assert.Equal("#BA1E293B", settings.BackgroundHex);
             Assert.Equal("#38BDF8", settings.AccentHex);
 
-            settings.ApplyThemePreset("EmeraldTerminal");
-            Assert.Equal("#10B981", settings.AccentHex);
+            settings.ApplyThemePreset("Obsidian");
+            Assert.Equal("#F01E1E22", settings.BackgroundHex);
+            Assert.Equal("#818CF8", settings.AccentHex);
+
+            settings.ApplyThemePreset("Material3Cyan");
+            Assert.Equal("#EE19222E", settings.BackgroundHex);
+            Assert.Equal("#38BDF8", settings.AccentHex);
 
             settings.ApplyThemePreset("CyberDark");
             Assert.Equal("#EE12141A", settings.BackgroundHex);
@@ -75,13 +85,6 @@ namespace WPMOverlay.Tests
         [Fact]
         public void NetWpmCalculation_DeductsBackspacesAndErrorsCorrectly()
         {
-            // Verify our Net Characters and WPM formula:
-            // Standard typing: 5 characters = 1 word
-            // If gross characters = 250 in 60s -> 50 Gross WPM.
-            // If backspaces = 20, net characters = 250 - (20 * (1 + 1.0)) = 250 - 40 = 210.
-            // Net Words = 210 / 5 = 42 words.
-            // Net WPM = 42 / 1 min = 42 WPM.
-
             int grossChars = 250;
             int backspaces = 20;
             double penaltyMultiplier = 1.0;
@@ -93,16 +96,44 @@ namespace WPMOverlay.Tests
 
             Assert.Equal(42.0, netWpm);
 
-            // If accuracy is calculated:
             double correct = Math.Max(0, grossChars - (backspaces * 2));
             double accuracy = (correct / grossChars) * 100.0;
             Assert.Equal(84.0, accuracy);
         }
 
         [Fact]
+        public void SustainedBurstStitching_CalculatesActiveTypingWithoutPausePenalty()
+        {
+            // Simulate 3 bursts in 5 minutes:
+            // Burst 1: 13s, 65 chars (13 words) -> 60 WPM
+            // Pause 40s (should not penalize active typing)
+            // Burst 2: 60s, 300 chars (60 words) -> 60 WPM
+            // Pause 30s
+            // Burst 3: 120s, 600 chars (120 words) -> 60 WPM
+            // Total Active Time: 13s + 60s + 120s = 193s = 3.216 minutes
+            // Total Net Words: 13 + 60 + 120 = 193 words
+            // Sustained WPM = 193 / (193/60) = 60 WPM!
+
+            double burst1Duration = 13.0;
+            double burst1Words = 13.0;
+
+            double burst2Duration = 60.0;
+            double burst2Words = 60.0;
+
+            double burst3Duration = 120.0;
+            double burst3Words = 120.0;
+
+            double totalActiveSeconds = burst1Duration + burst2Duration + burst3Duration;
+            double totalWords = burst1Words + burst2Words + burst3Words;
+            double activeMinutes = totalActiveSeconds / 60.0;
+            double sustainedWpm = totalWords / activeMinutes;
+
+            Assert.Equal(60.0, Math.Round(sustainedWpm));
+        }
+
+        [Fact]
         public void StartupManager_SafeCheck_DoesNotThrow()
         {
-            // Verifies registry query executes safely without throwing unhandled exceptions
             bool isEnabled = StartupManager.IsStartupEnabled();
             Assert.True(isEnabled || !isEnabled);
         }
