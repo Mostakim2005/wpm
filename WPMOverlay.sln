@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{203721A7-5F17-4B5F-9ED6-BAAC637604BC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WPMOverlay", "src\WPMOverlay\WPMOverlay.csproj", "{49750A81-EEC5-43BB-A938-0E2069D7F256}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0163055C-691E-459B-AE13-025739D6544C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WPMOverlay.Tests", "tests\WPMOverlay.Tests\WPMOverlay.Tests.csproj", "{8BE99417-BDBC-43E7-A1EF-C76D3FDC9738}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{49750A81-EEC5-43BB-A938-0E2069D7F256}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49750A81-EEC5-43BB-A938-0E2069D7F256}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49750A81-EEC5-43BB-A938-0E2069D7F256}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49750A81-EEC5-43BB-A938-0E2069D7F256}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BE99417-BDBC-43E7-A1EF-C76D3FDC9738}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BE99417-BDBC-43E7-A1EF-C76D3FDC9738}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BE99417-BDBC-43E7-A1EF-C76D3FDC9738}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BE99417-BDBC-43E7-A1EF-C76D3FDC9738}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{49750A81-EEC5-43BB-A938-0E2069D7F256} = {203721A7-5F17-4B5F-9ED6-BAAC637604BC}
+		{8BE99417-BDBC-43E7-A1EF-C76D3FDC9738} = {0163055C-691E-459B-AE13-025739D6544C}
+	EndGlobalSection
+EndGlobal

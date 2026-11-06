@@ -15,16 +15,18 @@ namespace WPMOverlay.Services
             "WPMOverlay");
         private static readonly string DbFilePath = Path.Combine(DbFolder, "typing_history.db");
 
-        public DatabaseService()
+        public DatabaseService(string? databasePath = null)
         {
-            if (!Directory.Exists(DbFolder))
+            string path = databasePath ?? DbFilePath;
+            string? folder = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
             {
-                Directory.CreateDirectory(DbFolder);
+                Directory.CreateDirectory(folder);
             }
 
             _connectionString = new SqliteConnectionStringBuilder
             {
-                DataSource = DbFilePath,
+                DataSource = path,
                 Mode = SqliteOpenMode.ReadWriteCreate
             }.ToString();
 

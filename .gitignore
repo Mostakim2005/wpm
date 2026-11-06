@@ -1,8 +1,23 @@
+# Build output
 bin/
 obj/
+artifacts/
+TestResults/
+
+# IDE and user files
+.vs/
+.idea/
 *.user
 *.suo
-.vs/
+*.log
+
+# Local SQLite databases
 *.db
 *.db-shm
 *.db-wal
+
+# Portable builds are published through GitHub Releases, never committed
+releases/
+
+# Local agent metadata
+.commandcode/

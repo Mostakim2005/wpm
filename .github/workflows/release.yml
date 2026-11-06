@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-portable:
+    name: Publish portable executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore WPMOverlay.sln
+
+      - name: Test
+        run: dotnet test WPMOverlay.sln -c Release --verbosity normal
+
+      - name: Publish single-file portable build
+        run: >
+          dotnet publish src/WPMOverlay/WPMOverlay.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o artifacts/publish
+
+      - name: Name the release asset
+        shell: pwsh
+        run: |
+          $source = "artifacts/publish/WPMOverlay.exe"
+          if (!(Test-Path $source)) { throw "Publish output was not produced." }
+          New-Item -ItemType Directory -Force artifacts/release | Out-Null
+          Copy-Item $source "artifacts/release/WPMOverlay-${{ github.ref_name }}-Portable.exe"
+
+      - name: Attach executable to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/release/*.exe
+          generate_release_notes: true
+          fail_on_unmatched_files: true

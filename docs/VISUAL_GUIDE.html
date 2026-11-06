@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WPM Overlay — Visual Guide & Architecture Dashboard</title>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  </script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --surface: #131c2e;
+      --surface-2: #1b2740;
+      --border: #2b3a55;
+      --text: #f1f5f9;
+      --muted: #a8b6cc;
+      --accent: #7dd3fc;
+      --accent-strong: #38bdf8;
+      --accent-ink: #082f49;
+      --success: #6ee7b7;
+      --success-bg: rgba(16, 185, 129, 0.14);
+      --warn: #fcd34d;
+      --warn-bg: rgba(245, 158, 11, 0.14);
+      --danger: #fca5a5;
+      --danger-bg: rgba(239, 68, 68, 0.14);
+      --code-bg: #080e19;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+    }
+    [data-theme="light"] {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-2: #e8eef7;
+      --border: #b8c6da;
+      --text: #0f172a;
+      --muted: #44546b;
+      --accent: #075985;
+      --accent-strong: #0369a1;
+      --accent-ink: #ffffff;
+      --success: #065f46;
+      --success-bg: rgba(5, 150, 105, 0.12);
+      --warn: #78350f;
+      --warn-bg: rgba(245, 158, 11, 0.16);
+      --danger: #7f1d1d;
+      --danger-bg: rgba(220, 38, 38, 0.12);
+      --code-bg: #0b1220;
+      --shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 28px 20px 56px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+    a { color: var(--accent-strong); }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 22px;
+    }
+    h1 { font-size: clamp(1.5rem, 3vw, 2rem); color: var(--accent); letter-spacing: -0.02em; }
+    .subtitle { color: var(--muted); max-width: 720px; margin-top: 6px; }
+    .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .pill {
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+    .theme-toggle {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 14px;
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .theme-toggle:hover, .theme-toggle:focus-visible { border-color: var(--accent-strong); outline: none; }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+    .tab-btn {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+    .tab-btn:hover { border-color: var(--accent-strong); }
+    .tab-btn.active { background: var(--accent-strong); color: var(--accent-ink); border-color: var(--accent-strong); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: rise 160ms ease-out; }
+    @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .section-head { margin-bottom: 14px; }
+    .section-head h2 { font-size: 1.25rem; color: var(--accent); }
+    .section-head p { color: var(--muted); font-size: 0.95rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 14px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+    .card-title { font-size: 0.98rem; font-weight: 700; color: var(--text); word-break: break-word; }
+    .badge { font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .badge-feature { background: var(--success-bg); color: var(--success); }
+    .badge-human { background: var(--warn-bg); color: var(--warn); }
+    .badge-agent { background: var(--success-bg); color: var(--success); }
+    .badge-trap { background: var(--danger-bg); color: var(--danger); }
+    .summary { color: var(--accent); font-weight: 600; font-size: 0.9rem; padding-left: 10px; border-left: 3px solid var(--accent); }
+    .card p { font-size: 0.9rem; color: var(--text); }
+    .card p strong { color: var(--accent); }
+    .anchor {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.78rem;
+      background: var(--code-bg);
+      color: #cbd5e1;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #24324a;
+      overflow-wrap: anywhere;
+      margin-top: auto;
+    }
+    .anchor b { color: #7dd3fc; font-weight: 600; }
+    .mermaid-box {
+      background: var(--code-bg);
+      border: 1px solid #24324a;
+      border-radius: 10px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+    .mermaid { display: flex; justify-content: center; min-width: 520px; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+    .note {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent-strong);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+    }
+    .search {
+      width: 100%;
+      max-width: 420px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      margin-bottom: 16px;
+    }
+    .search:focus { outline: 2px solid var(--accent-strong); outline-offset: 1px; }
+    .empty { color: var(--muted); font-style: italic; padding: 18px; display: none; }
+    footer { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.84rem; }
+    code { font-family: ui-monospace, Consolas, monospace; background: var(--code-bg); color: #cbd5e1; padding: 1px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>WPM Overlay — Visual Guide</h1>
+    <p class="subtitle">Plain-English map of what the app does, how it works, what failed before, and which code must never be touched.</p>
+    <div class="meta">
+      <span class="pill">C# / .NET 8 WPF</span>
+      <span class="pill">Windows 10 &amp; 11 · x64</span>
+      <span class="pill">SQLite · local only</span>
+      <span class="pill">v1.3.1</span>
+    </div>
+  </div>
+  <button class="theme-toggle" id="themeBtn" type="button" aria-label="Switch color theme">☀️ Light mode</button>
+</header>
+
+<div class="tabs" role="tablist" aria-label="Documentation sections">
+  <button class="tab-btn active" role="tab" aria-selected="true" data-tab="intent">1. Intent &amp; Features</button>
+  <button class="tab-btn" role="tab" aria-selected="false" data-tab="arch">2. Visual Architecture</button>
+  <button class="tab-btn" role="tab" aria-selected="false" data-tab="decisions">3. Decisions &amp; Pivots</button>
+  <button class="tab-btn" role="tab" aria-selected="false" data-tab="traps">4. Landmines</button>
+</div>
+
+<!-- TAB 1 -->
+<section id="intent" class="tab-panel active" role="tabpanel">
+  <div class="section-head">
+    <h2>What the user wants (and must keep)</h2>
+    <p>Source of truth: <code>docs/PRODUCT.md</code>. Search by feature, alias, or file.</p>
+  </div>
+  <input class="search" id="featureSearch" type="search" placeholder="Filter features… e.g. idle, theme, CSV, tray" aria-label="Filter features" />
+  <div class="grid" id="featureGrid">
+
+    <article class="card" data-search="system wide keystroke tracking global hook WH_KEYBOARD_LL input capture keyboard listener">
+      <div class="card-header"><span class="card-title">System-Wide Keystroke Tracking</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Captures typing in every Windows application through a native low-level keyboard hook.</div>
+      <p><strong>User intention:</strong> Work in browsers, editors, chat apps, and games without per-app integration.</p>
+      <div class="anchor"><b>Code:</b> src/WPMOverlay/Services/KeyboardHook.cs → KeyboardHook.Start, HookCallback, IsIgnoredModifier</div>
+    </article>
+
+    <article class="card" data-search="rolling WPM metrics 15s 30s 60s live speed sliding window">
+      <div class="card-header"><span class="card-title">Rolling WPM Metrics</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Live typing speed across rolling 15-second, 30-second, and 60-second windows.</div>
+      <p><strong>User intention:</strong> React quickly to bursts while still showing a steadier medium-term pace.</p>
+      <div class="anchor"><b>Code:</b> TypingEngine.cs → OnCalcTimerElapsed, CalculateWindowWpm</div>
+    </article>
+
+    <article class="card" data-search="five minute sustained WPM 5m burst stitching active time">
+      <div class="card-header"><span class="card-title">Five-Minute Sustained WPM</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Stitches active typing bursts together and ignores reading pauses.</div>
+      <p><strong>User intention:</strong> A pause to think must not destroy an otherwise strong sustained result.</p>
+      <div class="anchor"><b>Code:</b> TypingEngine.cs → CalculateSustained5mWpm</div>
+    </article>
+
+    <article class="card" data-search="net WPM accuracy penalty backspace error correction honest speed">
+      <div class="card-header"><span class="card-title">Net WPM + Accuracy Penalty</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Deducts erased characters and wasted correction keystrokes so only correct typing counts.</div>
+      <p><strong>User intention:</strong> Fast sloppy typing must never beat careful typing.</p>
+      <div class="anchor"><b>Code:</b> TypingEngine.cs → CalculateWindowWpm, EndSession · AppSettings.cs → ErrorPenaltyMultiplier</div>
+    </article>
+
+    <article class="card" data-search="smart keystroke anti spam filter key hold autorepeat mash chatter oscillation palm smash">
+      <div class="card-header"><span class="card-title">Smart Anti-Spam Filter</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Rejects chatter, held keys, unbroken mashing, and two-key oscillation before they reach the metrics.</div>
+      <p><strong>User intention:</strong> Accidental key holds must not create fake record scores.</p>
+      <div class="anchor"><b>Code:</b> TypingEngine.cs → IsValidTypingKeystroke</div>
+    </article>
+
+    <article class="card" data-search="compact two column HUD overlay card floating layout">
+      <div class="card-header"><span class="card-title">Compact Two-Column HUD</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Live windows on the left, personal records on the right, status and accuracy in the footer.</div>
+      <p><strong>User intention:</strong> Glanceable and compact enough for a screen corner without covering work.</p>
+      <div class="anchor"><b>Code:</b> MainWindow.xaml → CardBorder, Row15s, RowTop · MainWindow.xaml.cs → UpdateVisuals</div>
+    </article>
+
+    <article class="card" data-search="idle retention last session no flat zero idle metrics">
+      <div class="card-header"><span class="card-title">Idle Retention</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Keeps showing the last session's speed and peaks instead of dropping to zero.</div>
+      <p><strong>User intention:</strong> The user can still read the result of the burst they just finished.</p>
+      <div class="anchor"><b>Code:</b> TypingEngine.cs → EndSession, LastFinishedAvgWpm · MainWindow.xaml.cs → UpdateVisuals</div>
+    </article>
+
+    <article class="card" data-search="auto hide pop in fade timeout grace period auto show">
+      <div class="card-header"><span class="card-title">Auto-Hide &amp; Pop-In</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Fades in the instant typing starts and fades out after the configured idle delay.</div>
+      <p><strong>User intention:</strong> Mouse-leave or closing Settings must wait the full delay, not hide instantly.</p>
+      <div class="anchor"><b>Code:</b> MainWindow.xaml.cs → StartFadeIn, StartFadeOut, TriggerAutoHideGracePeriod</div>
+    </article>
+
+    <article class="card" data-search="drag position always on top move overlay topmost placement pin">
+      <div class="card-header"><span class="card-title">Drag, Position &amp; Always On Top</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Draggable HUD that remembers its position and can stay above other windows.</div>
+      <p><strong>User intention:</strong> Placement survives restarts and the overlay never gets lost behind windows.</p>
+      <div class="anchor"><b>Code:</b> MainWindow.xaml.cs → Window_MouseLeftButtonDown, RestorePosition, SavePosition, MenuTopmost_Click</div>
+    </article>
+
+    <article class="card" data-search="SQLite history persistence database sessions table typing_history.db">
+      <div class="card-header"><span class="card-title">SQLite History Persistence</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Saves completed sessions locally so records and averages survive restarts.</div>
+      <p><strong>User intention:</strong> Private, offline, durable history with no server or account.</p>
+      <div class="anchor"><b>Code:</b> DatabaseService.cs → InitializeDatabase, SaveSession, GetStatsSummary, GetRecentSessions</div>
+    </article>
+
+    <article class="card" data-search="history analytics dashboard KPI cards DataGrid session list">
+      <div class="card-header"><span class="card-title">History Analytics Dashboard</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Five summary cards and a sortable table of the 250 most recent sessions.</div>
+      <p><strong>User intention:</strong> Understand typing history without reading raw database rows.</p>
+      <div class="anchor"><b>Code:</b> HistoryWindow.xaml → GridSessions, TxtAllTimeTop · HistoryWindow.xaml.cs → LoadData</div>
+    </article>
+
+    <article class="card" data-search="CSV history export backup spreadsheet">
+      <div class="card-header"><span class="card-title">CSV History Export</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Exports up to 10,000 recent sessions for spreadsheets or archiving.</div>
+      <p><strong>User intention:</strong> The user owns their data and can take it elsewhere.</p>
+      <div class="anchor"><b>Code:</b> DatabaseService.cs → ExportToCsv · HistoryWindow.xaml.cs → ExportCsv_Click</div>
+    </article>
+
+    <article class="card" data-search="selective history deletion delete sessions clear all purge remove entry">
+      <div class="card-header"><span class="card-title">Selective History Deletion</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Deletes selected sessions or clears everything, with confirmation and instant recalculation.</div>
+      <p><strong>User intention:</strong> Accidental key-mash sessions can be removed so they stop polluting records.</p>
+      <div class="anchor"><b>Code:</b> HistoryWindow.xaml.cs → DeleteSelected_Click, GridSessions_PreviewKeyDown, ClearHistory_Click · DatabaseService.cs → DeleteSessions</div>
+    </article>
+
+    <article class="card" data-search="adaptive theme presets themes colors dark mode light mode custom hex">
+      <div class="card-header"><span class="card-title">Adaptive Theme Presets</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Nine presets plus automatic light/dark contrast tokens keep every window readable.</div>
+      <p><strong>User intention:</strong> No white-on-white dropdowns, invisible labels, or hardcoded colors.</p>
+      <div class="anchor"><b>Code:</b> AppSettings.cs → ApplyThemePreset · ThemeManager.cs → ApplyTheme · SettingsWindow.xaml → CmbPreset</div>
+    </article>
+
+    <article class="card" data-search="live settings preview metric toggles apply now visible chips opacity scale">
+      <div class="card-header"><span class="card-title">Live Settings Preview</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Preview changes on the real overlay before saving; hide any metric row independently.</div>
+      <p><strong>User intention:</strong> Tune appearance without restarting the app or guessing.</p>
+      <div class="anchor"><b>Code:</b> SettingsWindow.xaml.cs → Apply_Click, CommitToSettings · MainWindow.xaml.cs → ApplySettings</div>
+    </article>
+
+    <article class="card" data-search="system tray control tray icon notify icon context menu">
+      <div class="card-header"><span class="card-title">System Tray Control</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Tray icon keeps the app reachable and shows Top/Last speed in its tooltip.</div>
+      <p><strong>User intention:</strong> Hiding the overlay must not stop the background tracker.</p>
+      <div class="anchor"><b>Code:</b> MainWindow.xaml.cs → SetupTrayIcon, ToggleOverlayVisibility</div>
+    </article>
+
+    <article class="card" data-search="Windows boot startup auto start registry run key launch on login">
+      <div class="card-header"><span class="card-title">Windows Boot Startup</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">Optionally starts automatically when the user signs in to Windows.</div>
+      <p><strong>User intention:</strong> Turning the option off removes the startup entry cleanly.</p>
+      <div class="anchor"><b>Code:</b> StartupManager.cs → SetStartup, IsStartupEnabled</div>
+    </article>
+
+    <article class="card" data-search="portable single file executable exe no install release">
+      <div class="card-header"><span class="card-title">Portable Single-File Executable</span><span class="badge badge-feature">Active</span></div>
+      <div class="summary">One self-contained Windows executable with no installer and no runtime download.</div>
+      <p><strong>User intention:</strong> Download one file, double-click, start typing.</p>
+      <div class="anchor"><b>Code:</b> WPMOverlay.csproj → TargetFramework, UseWPF · .github/workflows/release.yml → publish-portable</div>
+    </article>
+
+  </div>
+  <p class="empty" id="featureEmpty">No features match that filter.</p>
+  <div class="note" style="margin-top:16px"><strong>Wishlist:</strong> empty. Add a <code>[WISHLIST: ...]</code> block to <code>docs/PRODUCT.md</code> only when a new capability is explicitly approved.</div>
+</section>
+
+<!-- TAB 2 -->
+<section id="arch" class="tab-panel" role="tabpanel">
+  <div class="section-head">
+    <h2>How the program fits together</h2>
+    <p>Full detail: <code>docs/ARCHITECTURE.md</code>.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">System Flow</div>
+    <div class="summary">Keyboard → hook → engine → SQLite → HUD, with settings and tray alongside.</div>
+    <div class="mermaid-box">
+      <pre class="mermaid">
+flowchart TB
+    Keyboard[User Keyboard] --> Hook[KeyboardHook<br/>WH_KEYBOARD_LL]
+    Hook -->|valid keystroke| Engine[TypingEngine<br/>rolling buffers]
+    Hook -->|modifier keys| Drop[Ignored]
+    Engine --> Windows[15s / 30s / 60s windows]
+    Engine --> Sustained[5m burst stitching]
+    Engine --> Accuracy[Net WPM + penalty]
+    Engine -->|session ends| DB[(SQLite<br/>typing_history.db)]
+    DB --> Summary[Top / Avg / Last]
+    DB --> History[HistoryWindow]
+    Windows --> HUD[MainWindow HUD]
+    Sustained --> HUD
+    Accuracy --> HUD
+    Summary --> HUD
+    Settings[config.json] --> HUD
+    Settings --> Theme[ThemeManager]
+    Theme --> HUD
+    Theme --> History
+    Theme --> SettingsUI[SettingsWindow]
+    Tray[NotifyIcon tray] --> HUD
+    Tray --> History
+    Tray --> SettingsUI
+      </pre>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <div class="card-title">Tech Stack</div>
+      <div class="summary">Chosen for a tiny, offline, no-install Windows utility.</div>
+      <p><strong>.NET 8 WPF:</strong> transparent, borderless, hardware-accelerated HUD.</p>
+      <p><strong>WinForms NotifyIcon:</strong> reliable tray support WPF lacks.</p>
+      <p><strong>WH_KEYBOARD_LL:</strong> system-wide input without plugins.</p>
+      <p><strong>SQLite:</strong> private local history in one file.</p>
+      <p><strong>DynamicResource tokens:</strong> all nine themes repaint instantly.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Key Mechanics</div>
+      <div class="summary">Three tricks define the product's honesty and speed.</div>
+      <p><strong>Rolling buffer:</strong> 310-second retention; 150 ms recalculation timer.</p>
+      <p><strong>Net WPM:</strong> <code>max(0, typed − backspaces × (1 + penalty)) ÷ 5 ÷ active minutes</code>.</p>
+      <p><strong>5m stitching:</strong> gaps ≤ 3.5 s count as continuous typing; longer gaps are reading pauses.</p>
+      <p><strong>Session save:</strong> only after ≥ 5 keystrokes and ≥ 1.5 s.</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="card-title">Verification Commands</div>
+    <div class="summary">Run these before committing.</div>
+    <div class="anchor"><b>Build:</b> dotnet build WPMOverlay.sln -c Release<br/><b>Test:</b> dotnet test WPMOverlay.sln -c Release --no-build<br/><b>Package:</b> dotnet publish src/WPMOverlay/WPMOverlay.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o artifacts/publish</div>
+  </div>
+</section>
+
+<!-- TAB 3 -->
+<section id="decisions" class="tab-panel" role="tabpanel">
+  <div class="section-head">
+    <h2>Why it is built this way</h2>
+    <p>Full detail: <code>docs/DECISIONS_AND_TRAPS.md</code>.</p>
+  </div>
+  <div class="grid">
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">WPF HUD + WinForms Tray</span><span class="badge badge-agent">AGENT · APPROVED</span></div>
+      <div class="summary">Keep WPF for the overlay; enable WinForms only for NotifyIcon.</div>
+      <p><strong>Rejected:</strong> pure WPF had no dependable tray icon without extra dependencies.</p>
+      <div class="anchor"><b>Code:</b> WPMOverlay.csproj → UseWPF, UseWindowsForms · MainWindow.xaml.cs → SetupTrayIcon</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Local-First SQLite</span><span class="badge badge-human">DECIDED BY HUMAN</span></div>
+      <div class="summary">All history stays in a local file; no accounts, network, or cloud.</div>
+      <p><strong>Rejected:</strong> cloud sync added login friction, privacy risk, and cost.</p>
+      <div class="anchor"><b>Code:</b> DatabaseService.cs → InitializeDatabase, SaveSession</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Net WPM With Error Penalty</span><span class="badge badge-human">DECIDED BY HUMAN</span></div>
+      <div class="summary">Count net correct characters, not raw keystrokes.</div>
+      <p><strong>Rejected:</strong> gross WPM let backspacing and mashing inflate the score.</p>
+      <div class="anchor"><b>Code:</b> TypingEngine.cs → CalculateWindowWpm, EndSession · AppSettings.cs → ErrorPenaltyMultiplier</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Dynamic Theme Tokens</span><span class="badge badge-agent">AGENT · APPROVED</span></div>
+      <div class="summary">Shared luminance-aware brushes replace hardcoded per-window colors.</div>
+      <p><strong>Rejected:</strong> hardcoded colors produced white-on-white dropdowns and invisible labels.</p>
+      <div class="anchor"><b>Code:</b> ThemeManager.cs → ApplyTheme · App.xaml → AppSurfaceBrush, AppTextPrimaryBrush</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Burst-Stitched 5-Minute WPM</span><span class="badge badge-human">DECIDED BY HUMAN</span></div>
+      <div class="summary">Divide words by active typing time, not wall-clock time.</div>
+      <p><strong>Rejected:</strong> wall-clock division punished legitimate pauses for reading or thinking.</p>
+      <div class="anchor"><b>Code:</b> TypingEngine.cs → CalculateSustained5mWpm</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Source-Only Repo, Tag Releases</span><span class="badge badge-human">DECIDED BY HUMAN</span></div>
+      <div class="summary">Keep binaries out of git; publish the portable exe through Releases.</div>
+      <p><strong>Rejected:</strong> committing six exes added roughly 387 MB to history and slowed every clone.</p>
+      <div class="anchor"><b>Code:</b> .gitignore → releases/ · .github/workflows/release.yml → publish-portable</div>
+    </article>
+
+  </div>
+</section>
+
+<!-- TAB 4 -->
+<section id="traps" class="tab-panel" role="tabpanel">
+  <div class="section-head">
+    <h2>Do not touch</h2>
+    <p>Each rule prevents a specific bug from returning. Full detail: <code>docs/DECISIONS_AND_TRAPS.md</code>.</p>
+  </div>
+  <div class="grid">
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Settings Initialization Order</span><span class="badge badge-trap">DO NOT TOUCH</span></div>
+      <div class="summary">Never build the temp settings clone after InitializeComponent.</div>
+      <p><strong>What breaks:</strong> XAML slider coercion raises ValueChanged early; a null temp object crashes Settings and hides the overlay.</p>
+      <div class="anchor"><b>Protected:</b> SettingsWindow.xaml.cs → constructor, _isInitializing, SliderOpacity_ValueChanged</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Assembly-Qualified Pack URIs</span><span class="badge badge-trap">DO NOT TOUCH</span></div>
+      <div class="summary">Always keep <code>/WPMOverlay;component/</code> in icon URIs.</div>
+      <p><strong>What breaks:</strong> testhost and secondary assemblies resolve short URIs against the wrong assembly and throw “Cannot locate resource”.</p>
+      <div class="anchor"><b>Protected:</b> MainWindow.xaml, SettingsWindow.xaml, HistoryWindow.xaml → Icon</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">WPF / WinForms Type Collisions</span><span class="badge badge-trap">DO NOT TOUCH</span></div>
+      <div class="summary">Keep every Wpf-prefixed alias while both frameworks are enabled.</div>
+      <p><strong>What breaks:</strong> Application, Color, MessageBox, and MouseEventArgs become ambiguous (CS0104).</p>
+      <div class="anchor"><b>Protected:</b> App.xaml.cs, ThemeManager.cs, HistoryWindow.xaml.cs, MainWindow.xaml.cs → aliases</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">ComboBox Popup Tokenization</span><span class="badge badge-trap">DO NOT TOUCH</span></div>
+      <div class="summary">Never replace DynamicComboBoxStyle with a stock ComboBox.</div>
+      <p><strong>What breaks:</strong> the native popup paints a white surface, causing contrast inversion on dark themes.</p>
+      <div class="anchor"><b>Protected:</b> SettingsWindow.xaml → DynamicComboBoxStyle, CmbPreset</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Auto-Hide Grace Timer</span><span class="badge badge-trap">DO NOT TOUCH</span></div>
+      <div class="summary">Never hide directly on mouse-leave or settings-close.</div>
+      <p><strong>What breaks:</strong> the configured 1–15 second delay is ignored and the HUD vanishes instantly.</p>
+      <div class="anchor"><b>Protected:</b> MainWindow.xaml.cs → _autoHideGraceTimer, TriggerAutoHideGracePeriod, Window_MouseLeave, OpenSettingsWindow</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Anti-Spam Thresholds</span><span class="badge badge-trap">DO NOT TOUCH</span></div>
+      <div class="summary">Do not loosen 30 ms, 2 repeats, 25 characters, or the 6-key oscillation check.</div>
+      <p><strong>What breaks:</strong> held keys and mashing generate fake 300+ WPM records and corrupt all history.</p>
+      <div class="anchor"><b>Protected:</b> TypingEngine.cs → IsValidTypingKeystroke · TypingEngineTests.cs → SmartFiltering_*</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">SQLite WAL Sidecars</span><span class="badge badge-trap">DO NOT TOUCH</span></div>
+      <div class="summary">The .db file is not the only artifact; -wal and -shm travel with it.</div>
+      <p><strong>What breaks:</strong> copying only the main file can lose recent sessions; deleting a locked database can corrupt it.</p>
+      <div class="anchor"><b>Protected:</b> DatabaseService.cs → constructor, InitializeDatabase · .gitignore → *.db-wal, *.db-shm</div>
+    </article>
+
+    <article class="card">
+      <div class="card-header"><span class="card-title">Hook Must Never Block</span><span class="badge badge-trap">DO NOT TOUCH</span></div>
+      <div class="summary">Keep HookCallback tiny and always call CallNextHookEx.</div>
+      <p><strong>What breaks:</strong> database or UI work in the hook causes system-wide typing lag; skipping the next hook can swallow keys.</p>
+      <div class="anchor"><b>Protected:</b> KeyboardHook.cs → HookCallback, Start · TypingEngine.cs → OnKeyPressed</div>
+    </article>
+
+  </div>
+</section>
+
+<footer>
+  Generated from <code>docs/PRODUCT.md</code>, <code>docs/ARCHITECTURE.md</code>, and <code>docs/DECISIONS_AND_TRAPS.md</code>. Open this file in any browser; diagrams load from the Mermaid CDN.
+</footer>
+
+<script>
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+      panels.forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  const themeBtn = document.getElementById('themeBtn');
+  const root = document.documentElement;
+  themeBtn.addEventListener('click', () => {
+    const light = root.getAttribute('data-theme') === 'light';
+    root.setAttribute('data-theme', light ? 'dark' : 'light');
+    themeBtn.textContent = light ? '☀️ Light mode' : '🌙 Dark mode';
+  });
+
+  const search = document.getElementById('featureSearch');
+  const cards = Array.from(document.querySelectorAll('#featureGrid .card'));
+  const empty = document.getElementById('featureEmpty');
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    let visible = 0;
+    cards.forEach(card => {
+      const haystack = (card.dataset.search + ' ' + card.textContent).toLowerCase();
+      const match = !q || haystack.includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    empty.style.display = visible ? 'none' : 'block';
+  });
+</script>
+</body>
+</html>

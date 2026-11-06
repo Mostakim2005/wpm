@@ -42,7 +42,8 @@ namespace WPMOverlay.Tests
         [Fact]
         public void DatabaseService_SaveAndQuerySummary_WorksCorrectly()
         {
-            var db = new DatabaseService();
+            string dbPath = Path.Combine(Path.GetTempPath(), $"wpm_test_{Guid.NewGuid():N}.db");
+            var db = new DatabaseService(dbPath);
 
             var testSession = new TypingSession
             {
@@ -81,12 +82,15 @@ namespace WPMOverlay.Tests
             {
                 if (File.Exists(tempCsv)) File.Delete(tempCsv);
             }
+
+            DeleteTestDatabase(dbPath);
         }
 
         [Fact]
         public void DatabaseService_DeleteSession_RemovesRecordAndRecalculatesStats()
         {
-            var db = new DatabaseService();
+            string dbPath = Path.Combine(Path.GetTempPath(), $"wpm_test_{Guid.NewGuid():N}.db");
+            var db = new DatabaseService(dbPath);
 
             var session1 = new TypingSession
             {
@@ -132,6 +136,8 @@ namespace WPMOverlay.Tests
             // All-Time Top should now be back down without the 350 WPM spam
             var recent = db.GetRecentSessions(100);
             Assert.DoesNotContain(recent, s => s.Id == accidentalSpamSession.Id);
+
+            DeleteTestDatabase(dbPath);
         }
 
         [Fact]
@@ -322,6 +328,20 @@ namespace WPMOverlay.Tests
                 now = now.AddMilliseconds(80);
                 int vk = (c == ' ') ? 0x20 : (int)char.ToUpper(c);
                 Assert.True(engine.IsValidTypingKeystroke(vk, false, now), $"Failed for char '{c}'");
+            }
+        }
+
+        private static void DeleteTestDatabase(string path)
+        {
+            foreach (string file in new[] { path, path + "-wal", path + "-shm" })
+            {
+                try
+                {
+                    if (File.Exists(file)) File.Delete(file);
+                }
+                catch (IOException)
+                {
+                }
             }
         }
     }
