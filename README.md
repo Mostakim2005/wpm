@@ -1,4 +1,4 @@
-# WPM Overlay
+﻿# WPM Overlay
 
 > A tiny, privacy-first Windows overlay that shows your real typing speed in any application.
 
@@ -11,17 +11,17 @@ WPM Overlay runs quietly in the background, watches your keystrokes through a na
 
 ## Features
 
-- **Works everywhere** — tracks typing in browsers, IDEs, chat apps, games, and documents through a system-wide `WH_KEYBOARD_LL` hook with no perceptible latency.
-- **Honest speed** — net WPM deducts backspaces and mistyped characters, with an adjustable `0.5x` to `2.0x` error penalty.
-- **Four live windows** — 15s, 30s, and 60s rolling speed plus a 5-minute sustained figure that stitches active bursts and ignores reading pauses.
-- **Records and retention** — Top, Avg, and Last values stay on screen when you stop typing instead of resetting to zero.
-- **Anti-spam filter** — held keys, hardware chatter, keyboard mashing, and two-key oscillation never inflate your records.
-- **Auto-hide with a real grace period** — pops in when you type and fades out after your configured 1–15 second delay.
-- **Local history dashboard** — five KPI cards, a 250-session table, selective deletion, clear-all, and CSV export.
-- **Nine adaptive themes** — every surface, popup, and label stays readable in both dark and light presets.
-- **Live customization** — preview themes on the real overlay, adjust opacity and scale, and hide any metric row.
-- **Tray control and optional auto-start** — manage the app from the system tray and launch it with Windows.
-- **One portable file** — self-contained `.exe`, no installer and no .NET runtime download.
+- **Works everywhere** â€” tracks typing in browsers, IDEs, chat apps, games, and documents through a system-wide `WH_KEYBOARD_LL` hook with no perceptible latency.
+- **Honest speed** â€” net WPM deducts backspaces and mistyped characters, with an adjustable `0.5x` to `2.0x` error penalty.
+- **Four live windows** â€” 15s, 30s, and 60s rolling speed plus a 5-minute sustained figure that stitches active bursts and ignores reading pauses.
+- **Records and retention** â€” Top, Avg, and Last values stay on screen when you stop typing instead of resetting to zero.
+- **Anti-spam filter** â€” held keys, hardware chatter, keyboard mashing, and two-key oscillation never inflate your records.
+- **Auto-hide with a real grace period** â€” pops in when you type and fades out after your configured 1â€“15 second delay.
+- **Local history dashboard** â€” five KPI cards, a 250-session table, selective deletion, clear-all, and CSV export.
+- **Nine adaptive themes** â€” every surface, popup, and label stays readable in both dark and light presets.
+- **Live customization** â€” preview themes on the real overlay, adjust opacity and scale, and hide any metric row.
+- **Tray control and optional auto-start** â€” manage the app from the system tray and launch it with Windows.
+- **One portable file** â€” self-contained `.exe`, no installer and no .NET runtime download.
 
 ## Download
 
@@ -32,7 +32,7 @@ Grab the latest portable build from **[GitHub Releases](https://github.com/Mosta
 3. Type anywhere to see live speeds.
 4. Right-click the overlay for Settings, History, Always on Top, and Reset Session.
 
-> Windows SmartScreen may warn about an unsigned executable. Choose **More info → Run anyway** if you trust the source.
+> Windows SmartScreen may warn about an unsigned executable. Choose **More info â†’ Run anyway** if you trust the source.
 
 ## Requirements
 
@@ -90,21 +90,21 @@ Open `docs/VISUAL_GUIDE.html` in any browser for the visual version.
 
 ```text
 .
-├── docs/                       # Product, architecture, decisions, visual guide
-├── src/WPMOverlay/             # C# / .NET 8 WPF application
-│   ├── Models/                 # Settings, sessions, summaries, keystrokes
-│   ├── Services/               # Hook, engine, database, theme, startup
-│   └── Views/                  # HUD, settings, and history windows
-├── tests/WPMOverlay.Tests/     # xUnit regression tests
-├── .github/workflows/          # CI and tag-triggered portable releases
-├── WPMOverlay.sln
-├── LICENSE
-└── THIRD_PARTY_NOTICES.md
+â”œâ”€â”€ docs/                       # Product, architecture, decisions, visual guide
+â”œâ”€â”€ src/WPMOverlay/             # C# / .NET 8 WPF application
+â”‚   â”œâ”€â”€ Models/                 # Settings, sessions, summaries, keystrokes
+â”‚   â”œâ”€â”€ Services/               # Hook, engine, database, theme, startup
+â”‚   â””â”€â”€ Views/                  # HUD, settings, and history windows
+â”œâ”€â”€ tests/WPMOverlay.Tests/     # xUnit regression tests
+â”œâ”€â”€ .github/workflows/          # CI and tag-triggered portable releases
+â”œâ”€â”€ WPMOverlay.sln
+â”œâ”€â”€ LICENSE
+â””â”€â”€ THIRD_PARTY_NOTICES.md
 ```
 
 ## How Releases Work
 
-Pushing a tag such as `v1.3.1` runs the release workflow on `windows-latest`. It restores, tests, publishes a self-contained single-file `win-x64` executable, and attaches it to the GitHub Release. Compiled binaries are intentionally kept out of git.
+Pushing a tag such as `v1.4.0` runs the release workflow on `windows-latest`. It restores, tests, publishes a self-contained single-file `win-x64` executable, and attaches it to the GitHub Release. Compiled binaries are intentionally kept out of git.
 
 ## Contributing
 
