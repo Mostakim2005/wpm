@@ -17,10 +17,12 @@ namespace WPMOverlay.Models
         public double Peak60sWpm { get; set; }
         public double AccuracyPercent { get; set; }
 
+        public double PeakWpm => Math.Max(Peak15sWpm, Math.Max(Peak30sWpm, Peak60sWpm));
+
         public string FormattedDate => StartedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");
         public string FormattedDuration => $"{DurationSeconds:F1}s";
         public string FormattedAvgWpm => $"{AvgWpm:F0} WPM";
-        public string FormattedPeakWpm => $"{Math.Max(Peak15sWpm, Math.Max(Peak30sWpm, Peak60sWpm)):F0} WPM";
+        public string FormattedPeakWpm => $"{PeakWpm:F0} WPM";
         public string FormattedAccuracy => $"{AccuracyPercent:F1}%";
     }
 }
