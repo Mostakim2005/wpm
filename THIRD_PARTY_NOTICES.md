@@ -7,7 +7,7 @@ WPM Overlay is built with open-source software. This file records the components
 | Component | Version | License | Upstream license text |
 | --- | --- | --- | --- |
 | [.NET Runtime and WPF](https://github.com/dotnet/runtime) | 8.0 | MIT | https://github.com/dotnet/runtime/blob/main/LICENSE.TXT |
-| [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore/tree/main/src/Microsoft.Data.Sqlite) | 10.0.14 | MIT | https://github.com/dotnet/efcore/blob/main/LICENSE.txt |
+| [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore/tree/main/src/Microsoft.Data.Sqlite) | 8.0.11 | MIT | https://github.com/dotnet/efcore/blob/main/LICENSE.txt |
 | [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw) | Transitive | Apache-2.0 | https://github.com/ericsink/SQLitePCL.raw/blob/master/LICENSE.txt |
 | [SQLite](https://www.sqlite.org/) | Transitive | Public Domain | https://www.sqlite.org/copyright.html |
 

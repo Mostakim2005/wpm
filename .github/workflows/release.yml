@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up .NET 8
         uses: actions/setup-dotnet@v4
@@ -37,19 +37,28 @@ jobs:
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
+          -p:PublishReadyToRun=false
+          -p:DebugType=none
+          -p:DebugSymbols=false
           -o artifacts/publish
 
-      - name: Name the release asset
+      - name: Name the release asset and generate SHA256SUMS.txt
         shell: pwsh
         run: |
           $source = "artifacts/publish/WPMOverlay.exe"
           if (!(Test-Path $source)) { throw "Publish output was not produced." }
           New-Item -ItemType Directory -Force artifacts/release | Out-Null
-          Copy-Item $source "artifacts/release/WPMOverlay-${{ github.ref_name }}-Portable.exe"
+          $assetName = "WPMOverlay-${{ github.ref_name }}-Portable.exe"
+          $dest = "artifacts/release/$assetName"
+          Copy-Item $source $dest
+          $hash = (Get-FileHash -Algorithm SHA256 $dest).Hash.ToLowerInvariant()
+          "$hash  $assetName" | Out-File -FilePath "artifacts/release/SHA256SUMS.txt" -Encoding ascii
 
-      - name: Attach executable to GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Attach executable and checksums to GitHub Release
+        uses: softprops/action-gh-release@v3
         with:
-          files: artifacts/release/*.exe
+          files: |
+            artifacts/release/*.exe
+            artifacts/release/SHA256SUMS.txt
           generate_release_notes: true
           fail_on_unmatched_files: true

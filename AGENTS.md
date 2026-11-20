@@ -14,10 +14,10 @@
 
 ## 3. Repository Directory Structure & Conventions
 * `src/WPMOverlay/` — C# .NET 8 WPF application:
-  * `Models/` — `AppSettings.cs`, `TypingSession.cs`, `StatsSummary.cs`, `KeystrokeEvent.cs`.
+  * `Models/` — `AppSettings.cs`, `TypingSession.cs`, `StatsSummary.cs`, `KeystrokeRecord.cs`, `MetricsSnapshot.cs`.
   * `Services/` — `KeyboardHook.cs` (`WH_KEYBOARD_LL`), `TypingEngine.cs` (rolling buffers & anti-spam), `DatabaseService.cs` (SQLite local storage), `ThemeManager.cs` (dynamic token engine), `SettingsService.cs`, `StartupManager.cs`.
   * `Views/` — `MainWindow.xaml` (floating HUD overlay), `SettingsWindow.xaml`, `HistoryWindow.xaml`.
-* `tests/WPMOverlay.Tests/` — xUnit regression test suite (12 tests covering rolling WPM, sustained bursts, accuracy penalties, anti-spam, token engine, and BAML safety).
+* `tests/WPMOverlay.Tests/` — xUnit regression test suite (isolated temp-path tests covering rolling WPM, sustained bursts, accuracy penalties, anti-spam, keyboard hook filtering, SQL/CSV/timezone regressions, token engine, and BAML safety).
 * `docs/` — Core Search-First documentation suite:
   * `PRODUCT.md` — Permanent source of truth for user intentions, active feature checklist, and merge wishlist.
   * `ARCHITECTURE.md` — Visual Mermaid diagrams, tech stack rationale, subsystem mechanics, and extension recipes.
@@ -29,7 +29,7 @@
 * **TRAP 1: SettingsWindow BAML Initialization Order** — Never construct `_tempSettings` after `InitializeComponent()`, and never remove `_isInitializing` / null checks from slider handlers in `SettingsWindow.xaml.cs`.
 * **TRAP 2: DynamicResource for All Theme Tokens** — Never hardcode colors or use `StaticResource` for brushes. All nine themes morph dynamically; static resources cause contrast inversions on theme changes.
 * **TRAP 3: Zero-Latency Low-Level Keyboard Hook** — `KeyboardHook.HookCallback` must remain minimal, non-blocking, and always call `CallNextHookEx`. Offload all calculations and SQLite writes to background timers.
-* **TRAP 4: Assembly-Qualified Pack URIs** — Always use `pack://application:,,,/WPMOverlay;component/Assets/...` for embedded icons to avoid test runner crashes (`testhost.exe`).
+* **TRAP 4: Assembly-Qualified Pack URIs** — Always use `pack://application:,,,/WPMOverlay;component/app_icon.ico` for embedded icons to avoid test runner crashes (`testhost.exe`).
 * **TRAP 5: WPF-WinForms Type Collisions** — Keep explicit type aliases (`WpfApplication`, `WpfColor`, `WpfMessageBox`, `WpfSaveFileDialog`) whenever referencing shared types across WPF and WinForms.
 * **TRAP 6: ComboBox Popup Tokenization** — Always use `DynamicComboBoxStyle` for dropdowns; native WPF combo popups render hardcoded white surfaces that fail contrast in dark themes.
 * **TRAP 7: Tag-Triggered Releases Only** — Never commit compiled binary executables into git. The portable executable is built by GitHub Actions on version tags (`v*`).
