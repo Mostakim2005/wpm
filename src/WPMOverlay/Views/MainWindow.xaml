@@ -8,6 +8,7 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
+        ShowActivated="False"
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
@@ -58,13 +59,13 @@
                 <!-- Top Section: Two-Column Data Layout matching Sketch -->
                 <Grid Grid.Row="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" MinWidth="110"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="Auto" MinWidth="100"/>
+                        <ColumnDefinition x:Name="LeftColDef" Width="Auto" MinWidth="110"/>
+                        <ColumnDefinition x:Name="DividerColDef" Width="1"/>
+                        <ColumnDefinition x:Name="RightColDef" Width="Auto" MinWidth="100"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- LEFT COLUMN: Rolling Windows (15s, 30s, 60s, 5m) -->
-                    <StackPanel Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
+                    <StackPanel x:Name="LeftMetricsColumn" Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center">
                         <!-- 15s -->
                         <Grid x:Name="Row15s" Margin="0,1,0,2">
                             <Grid.ColumnDefinitions>
@@ -122,7 +123,7 @@
                     <Border Grid.Column="1" x:Name="VerticalDivider" Width="1" VerticalAlignment="Stretch" Margin="0,2,0,2" Background="{DynamicResource AppDividerBrush}"/>
 
                     <!-- RIGHT COLUMN: Records (Top, Avg, Last) -->
-                    <StackPanel Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <StackPanel x:Name="RightMetricsColumn" Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Center">
                         <!-- Top -->
                         <Grid x:Name="RowTop" Margin="0,1,0,2">
                             <Grid.ColumnDefinitions>
@@ -173,8 +174,8 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse x:Name="StatusDot" Width="7" Height="7" Margin="0,0,4,0"/>
-                        <TextBlock x:Name="StatusText" Text="Live" FontSize="9.5" FontWeight="Medium" VerticalAlignment="Center"/>
+                        <Ellipse x:Name="StatusDot" Width="7" Height="7" Margin="0,0,4,0" Fill="{DynamicResource AppAccentBrush}"/>
+                        <TextBlock x:Name="StatusText" Text="Last" FontSize="9.5" FontWeight="Medium" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <TextBlock Grid.Column="2" x:Name="AccuracyText" Text="100% Acc" Foreground="{DynamicResource AppTextSecondaryBrush}" FontSize="9.5" VerticalAlignment="Center" HorizontalAlignment="Right" Opacity="0.85"/>

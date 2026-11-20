@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using WPMOverlay.Models;
@@ -12,87 +13,88 @@ namespace WPMOverlay.Views
         private readonly AppSettings _tempSettings;
         private bool _isInitializing = true;
 
+        /// <summary>
+        /// Raised when the user previews settings via "Apply Now" or reverts on cancel/close.
+        /// Never persists to config.json or Windows Registry until Save &amp; Close.
+        /// </summary>
+        public event Action<AppSettings>? PreviewSettingsRequested;
+
         public SettingsWindow(SettingsService settingsService)
         {
             _settingsService = settingsService;
 
-            // Clone settings to temp BEFORE calling InitializeComponent()
+            // TRAP 1: Clone settings to temp BEFORE calling InitializeComponent()
             // to prevent NullReferenceException during XAML slider ValueChanged deserialization
-            var current = _settingsService.CurrentSettings;
-            _tempSettings = new AppSettings
-            {
-                ThemePreset = current.ThemePreset,
-                BackgroundHex = current.BackgroundHex,
-                BorderHex = current.BorderHex,
-                AccentHex = current.AccentHex,
-                TextPrimaryHex = current.TextPrimaryHex,
-                TextSecondaryHex = current.TextSecondaryHex,
-                HighlightHex = current.HighlightHex,
-                WindowOpacity = current.WindowOpacity,
-                ScaleFactor = current.ScaleFactor,
-                AutoHideEnabled = current.AutoHideEnabled,
-                AutoHideDelaySeconds = current.AutoHideDelaySeconds,
-                IdleDisplayMode = current.IdleDisplayMode,
-                Show15s = current.Show15s,
-                Show30s = current.Show30s,
-                Show60s = current.Show60s,
-                Show5m = current.Show5m,
-                ShowTop = current.ShowTop,
-                ShowAvg = current.ShowAvg,
-                ShowLast = current.ShowLast,
-                AlwaysOnTop = current.AlwaysOnTop,
-                StartWithWindows = current.StartWithWindows,
-                ErrorPenaltyMultiplier = current.ErrorPenaltyMultiplier
-            };
+            _tempSettings = _settingsService.CurrentSettings.Clone();
 
             InitializeComponent();
             _isInitializing = false;
 
             Loaded += SettingsWindow_Loaded;
+            Closing += SettingsWindow_Closing;
         }
 
         private void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            _tempSettings.StartWithWindows = StartupManager.IsStartupEnabled();
             PopulateUiFromSettings();
+        }
+
+        private void SettingsWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            if (DialogResult != true)
+            {
+                // Revert any unconfirmed live theme/overlay preview when closing via Cancel, X, or Alt+F4
+                ThemeManager.ApplyTheme(_settingsService.CurrentSettings);
+                PreviewSettingsRequested?.Invoke(_settingsService.CurrentSettings);
+            }
         }
 
         private void PopulateUiFromSettings()
         {
-            // Select Preset item
-            foreach (ComboBoxItem item in CmbPreset.Items)
+            _isInitializing = true;
+            try
             {
-                if ((string)item.Tag == _tempSettings.ThemePreset)
+                // Select Preset item
+                foreach (ComboBoxItem item in CmbPreset.Items)
                 {
-                    CmbPreset.SelectedItem = item;
-                    break;
+                    if ((string)item.Tag == _tempSettings.ThemePreset)
+                    {
+                        CmbPreset.SelectedItem = item;
+                        break;
+                    }
                 }
+
+                SliderOpacity.Value = _tempSettings.WindowOpacity;
+                TxtOpacityVal.Text = $"{Math.Round(_tempSettings.WindowOpacity * 100)}%";
+
+                SliderScale.Value = _tempSettings.ScaleFactor;
+                TxtScaleVal.Text = $"{_tempSettings.ScaleFactor:F1}x";
+
+                ChkAutoHide.IsChecked = _tempSettings.AutoHideEnabled;
+                SliderHideDelay.Value = Math.Round(_tempSettings.AutoHideDelaySeconds);
+                TxtDelayVal.Text = $"{Math.Round(_tempSettings.AutoHideDelaySeconds)}s";
+
+                Chk15s.IsChecked = _tempSettings.Show15s;
+                Chk30s.IsChecked = _tempSettings.Show30s;
+                Chk60s.IsChecked = _tempSettings.Show60s;
+                Chk5m.IsChecked = _tempSettings.Show5m;
+                ChkTop.IsChecked = _tempSettings.ShowTop;
+                ChkAvg.IsChecked = _tempSettings.ShowAvg;
+                ChkLast.IsChecked = _tempSettings.ShowLast;
+
+                ChkAlwaysOnTop.IsChecked = _tempSettings.AlwaysOnTop;
+                ChkStartWindows.IsChecked = _tempSettings.StartWithWindows;
+
+                SliderPenalty.Value = _tempSettings.ErrorPenaltyMultiplier;
+                TxtPenaltyVal.Text = $"{_tempSettings.ErrorPenaltyMultiplier:F1}x";
+
+                ThemeManager.ApplyTheme(_tempSettings);
             }
-
-            SliderOpacity.Value = _tempSettings.WindowOpacity;
-            TxtOpacityVal.Text = $"{Math.Round(_tempSettings.WindowOpacity * 100)}%";
-
-            SliderScale.Value = _tempSettings.ScaleFactor;
-            TxtScaleVal.Text = $"{_tempSettings.ScaleFactor:F1}x";
-
-            ChkAutoHide.IsChecked = _tempSettings.AutoHideEnabled;
-            SliderHideDelay.Value = Math.Round(_tempSettings.AutoHideDelaySeconds);
-            TxtDelayVal.Text = $"{Math.Round(_tempSettings.AutoHideDelaySeconds)}s";
-
-            Chk15s.IsChecked = _tempSettings.Show15s;
-            Chk30s.IsChecked = _tempSettings.Show30s;
-            Chk60s.IsChecked = _tempSettings.Show60s;
-            Chk5m.IsChecked = _tempSettings.Show5m;
-            ChkTop.IsChecked = _tempSettings.ShowTop;
-            ChkAvg.IsChecked = _tempSettings.ShowAvg;
-            ChkLast.IsChecked = _tempSettings.ShowLast;
-
-            ChkAlwaysOnTop.IsChecked = _tempSettings.AlwaysOnTop;
-            ChkStartWindows.IsChecked = StartupManager.IsStartupEnabled();
-
-            SliderPenalty.Value = _tempSettings.ErrorPenaltyMultiplier;
-            TxtPenaltyVal.Text = $"{_tempSettings.ErrorPenaltyMultiplier:F1}x";
-
-            ThemeManager.ApplyTheme(_tempSettings);
+            finally
+            {
+                _isInitializing = false;
+            }
         }
 
         private void CmbPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -172,16 +174,17 @@ namespace WPMOverlay.Views
 
         private void Apply_Click(object sender, RoutedEventArgs e)
         {
-            _settingsService.UpdateSettings(s => CommitToSettings(s));
-            ThemeManager.ApplyTheme(_settingsService.CurrentSettings);
-            StartupManager.SetStartup(ChkStartWindows.IsChecked == true);
+            // Preview live on the overlay without writing config.json or Windows Startup Registry
+            CommitToSettings(_tempSettings);
+            ThemeManager.ApplyTheme(_tempSettings);
+            PreviewSettingsRequested?.Invoke(_tempSettings);
         }
 
         private void SaveClose_Click(object sender, RoutedEventArgs e)
         {
             _settingsService.UpdateSettings(s => CommitToSettings(s));
             ThemeManager.ApplyTheme(_settingsService.CurrentSettings);
-            StartupManager.SetStartup(ChkStartWindows.IsChecked == true);
+            StartupManager.SetStartup(_settingsService.CurrentSettings.StartWithWindows);
 
             DialogResult = true;
             Close();
@@ -189,7 +192,6 @@ namespace WPMOverlay.Views
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
-            ThemeManager.ApplyTheme(_settingsService.CurrentSettings);
             DialogResult = false;
             Close();
         }
@@ -203,18 +205,19 @@ namespace WPMOverlay.Views
             _tempSettings.ScaleFactor = def.ScaleFactor;
             _tempSettings.AutoHideEnabled = def.AutoHideEnabled;
             _tempSettings.AutoHideDelaySeconds = def.AutoHideDelaySeconds;
-            _tempSettings.Show15s = true;
-            _tempSettings.Show30s = true;
-            _tempSettings.Show60s = true;
-            _tempSettings.Show5m = true;
-            _tempSettings.ShowTop = true;
-            _tempSettings.ShowAvg = true;
-            _tempSettings.ShowLast = true;
-            _tempSettings.AlwaysOnTop = true;
-            _tempSettings.ErrorPenaltyMultiplier = 1.0;
+            _tempSettings.Show15s = def.Show15s;
+            _tempSettings.Show30s = def.Show30s;
+            _tempSettings.Show60s = def.Show60s;
+            _tempSettings.Show5m = def.Show5m;
+            _tempSettings.ShowTop = def.ShowTop;
+            _tempSettings.ShowAvg = def.ShowAvg;
+            _tempSettings.ShowLast = def.ShowLast;
+            _tempSettings.AlwaysOnTop = def.AlwaysOnTop;
+            _tempSettings.StartWithWindows = def.StartWithWindows;
+            _tempSettings.ErrorPenaltyMultiplier = def.ErrorPenaltyMultiplier;
 
             PopulateUiFromSettings();
-            ThemeManager.ApplyTheme(_tempSettings);
+            PreviewSettingsRequested?.Invoke(_tempSettings);
         }
     }
 }

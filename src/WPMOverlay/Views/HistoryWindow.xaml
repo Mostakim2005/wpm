@@ -5,7 +5,7 @@
         Icon="pack://application:,,,/WPMOverlay;component/app_icon.ico"
         Height="560" Width="840"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource AppBackgroundBrush}"
+        Background="{DynamicResource AppWindowBackgroundBrush}"
         Foreground="{DynamicResource AppTextPrimaryBrush}"
         FontFamily="Segoe UI">
 
@@ -24,8 +24,8 @@
                 <TextBlock Text="Typing Performance History" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource AppAccentBrush}" VerticalAlignment="Center"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="📥 Export CSV" Click="ExportCsv_Click" Padding="12,6" Margin="0,0,8,0" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
-                <Button Content="🔄 Refresh" Click="Refresh_Click" Padding="12,6" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppTextSecondaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
+                <Button x:Name="BtnExportCsv" Content="📥 Export CSV" Click="ExportCsv_Click" Padding="12,6" Margin="0,0,8,0" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppAccentBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
+                <Button x:Name="BtnRefresh" Content="🔄 Refresh" Click="Refresh_Click" Padding="12,6" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppTextSecondaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
             </StackPanel>
         </Grid>
 
@@ -87,6 +87,9 @@
                       HeadersVisibility="Column"
                       CanUserResizeRows="False"
                       SelectionMode="Extended"
+                      EnableRowVirtualization="True"
+                      VirtualizingPanel.IsVirtualizing="True"
+                      VirtualizingPanel.VirtualizationMode="Recycling"
                       PreviewKeyDown="GridSessions_PreviewKeyDown">
 
                 <!-- Row Context Menu for deleting individual entries -->
@@ -111,17 +114,23 @@
                         <Setter Property="Padding" Value="10,6"/>
                         <Setter Property="BorderThickness" Value="0"/>
                         <Setter Property="Foreground" Value="{DynamicResource AppTextPrimaryBrush}"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AppAccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AppTextOnAccentBrush}"/>
+                            </Trigger>
+                        </Style.Triggers>
                     </Style>
                 </DataGrid.Resources>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Date &amp; Time" Binding="{Binding FormattedDate}" Width="160"/>
-                    <DataGridTextColumn Header="Duration" Binding="{Binding FormattedDuration}" Width="80"/>
+                    <DataGridTextColumn Header="Date &amp; Time" Binding="{Binding FormattedDate}" SortMemberPath="StartedAt" Width="160"/>
+                    <DataGridTextColumn Header="Duration" Binding="{Binding FormattedDuration}" SortMemberPath="DurationSeconds" Width="80"/>
                     <DataGridTextColumn Header="Keystrokes" Binding="{Binding GrossKeystrokes}" Width="85"/>
                     <DataGridTextColumn Header="Backspaces" Binding="{Binding Backspaces}" Width="85"/>
-                    <DataGridTextColumn Header="Accuracy" Binding="{Binding FormattedAccuracy}" Width="85"/>
+                    <DataGridTextColumn Header="Accuracy" Binding="{Binding FormattedAccuracy}" SortMemberPath="AccuracyPercent" Width="85"/>
                     <DataGridTextColumn Header="Net Words" Binding="{Binding NetWords, StringFormat={}{0:F1}}" Width="85"/>
-                    <DataGridTextColumn Header="Avg WPM" Binding="{Binding FormattedAvgWpm}" Width="100"/>
-                    <DataGridTextColumn Header="Peak WPM" Binding="{Binding FormattedPeakWpm}" Width="*"/>
+                    <DataGridTextColumn Header="Avg WPM" Binding="{Binding FormattedAvgWpm}" SortMemberPath="AvgWpm" Width="100"/>
+                    <DataGridTextColumn Header="Peak WPM" Binding="{Binding FormattedPeakWpm}" SortMemberPath="PeakWpm" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
@@ -130,8 +139,8 @@
         <Grid Grid.Row="3" Margin="0,14,0,0">
             <!-- Left Side Actions: Delete Selected and Clear All -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <Button Content="🗑️ Delete Selected Entry" Click="DeleteSelected_Click" Padding="14,6" Margin="0,0,10,0" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="#F87171" BorderBrush="#DC2626" Cursor="Hand" FontWeight="SemiBold" ToolTip="Permanently remove selected session records (e.g. accidental key mashing tests)"/>
-                <Button Content="Clear All History" Click="ClearHistory_Click" Padding="12,6" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppTextSecondaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
+                <Button x:Name="BtnDeleteSelected" Content="🗑️ Delete Selected Entry" Click="DeleteSelected_Click" Padding="14,6" Margin="0,0,10,0" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppDangerBrush}" BorderBrush="{DynamicResource AppDangerBrush}" Cursor="Hand" FontWeight="SemiBold" ToolTip="Permanently remove selected session records (e.g. accidental key mashing tests)"/>
+                <Button x:Name="BtnClearHistory" Content="Clear All History" Click="ClearHistory_Click" Padding="12,6" Background="{DynamicResource AppSurfaceElevatedBrush}" Foreground="{DynamicResource AppTextSecondaryBrush}" BorderBrush="{DynamicResource AppBorderBrush}" Cursor="Hand"/>
             </StackPanel>
 
             <!-- Right Side Action: Close -->

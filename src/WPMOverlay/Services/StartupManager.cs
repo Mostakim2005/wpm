@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using Microsoft.Win32;
 
 namespace WPMOverlay.Services
@@ -10,18 +9,48 @@ namespace WPMOverlay.Services
         private const string AppName = "WPMOverlay";
         private const string RunRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
+        private static string? GetCurrentExecutablePath()
+        {
+            string? exePath = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(exePath))
+            {
+                exePath = Process.GetCurrentProcess().MainModule?.FileName;
+            }
+            return exePath;
+        }
+
         public static bool IsStartupEnabled()
         {
             try
             {
                 using var key = Registry.CurrentUser.OpenSubKey(RunRegistryKey, false);
                 if (key == null) return false;
-                var value = key.GetValue(AppName);
-                return value != null;
+
+                if (key.GetValue(AppName) is not string storedValue || string.IsNullOrWhiteSpace(storedValue))
+                {
+                    return false;
+                }
+
+                string normalizedStored = storedValue.Trim().Trim('"');
+                string? currentExe = GetCurrentExecutablePath();
+                if (string.IsNullOrEmpty(currentExe))
+                {
+                    return true;
+                }
+
+                return string.Equals(normalizedStored, currentExe, StringComparison.OrdinalIgnoreCase);
             }
             catch
             {
                 return false;
+            }
+        }
+
+        public static void SyncStartupPathIfEnabled(bool startWithWindows)
+        {
+            if (startWithWindows && !IsStartupEnabled())
+            {
+                SetStartup(true);
             }
         }
 
@@ -34,12 +63,7 @@ namespace WPMOverlay.Services
 
                 if (enable)
                 {
-                    string? exePath = Environment.ProcessPath;
-                    if (string.IsNullOrEmpty(exePath))
-                    {
-                        exePath = Process.GetCurrentProcess().MainModule?.FileName;
-                    }
-
+                    string? exePath = GetCurrentExecutablePath();
                     if (!string.IsNullOrEmpty(exePath))
                     {
                         key.SetValue(AppName, $"\"{exePath}\"");

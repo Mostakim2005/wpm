@@ -7,18 +7,29 @@ namespace WPMOverlay.Services
 {
     public class SettingsService
     {
-        private static readonly string SettingsFolder = Path.Combine(
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            WriteIndented = true
+        };
+
+        private static readonly string DefaultSettingsFolder = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "WPMOverlay");
 
-        private static readonly string SettingsFilePath = Path.Combine(SettingsFolder, "config.json");
+        private static readonly string DefaultSettingsFilePath = Path.Combine(DefaultSettingsFolder, "config.json");
+
+        private readonly string _settingsFilePath;
 
         public AppSettings CurrentSettings { get; private set; }
 
         public event Action<AppSettings>? SettingsUpdated;
 
-        public SettingsService()
+        public SettingsService(string? settingsFilePath = null)
         {
+            _settingsFilePath = string.IsNullOrWhiteSpace(settingsFilePath)
+                ? DefaultSettingsFilePath
+                : settingsFilePath;
+
             CurrentSettings = Load();
         }
 
@@ -26,12 +37,13 @@ namespace WPMOverlay.Services
         {
             try
             {
-                if (File.Exists(SettingsFilePath))
+                if (File.Exists(_settingsFilePath))
                 {
-                    string json = File.ReadAllText(SettingsFilePath);
+                    string json = File.ReadAllText(_settingsFilePath);
                     var settings = JsonSerializer.Deserialize<AppSettings>(json);
                     if (settings != null)
                     {
+                        settings.Sanitize();
                         CurrentSettings = settings;
                         return CurrentSettings;
                     }
@@ -51,14 +63,18 @@ namespace WPMOverlay.Services
         {
             try
             {
-                if (!Directory.Exists(SettingsFolder))
+                CurrentSettings.Sanitize();
+
+                string? folder = Path.GetDirectoryName(_settingsFilePath);
+                if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
                 {
-                    Directory.CreateDirectory(SettingsFolder);
+                    Directory.CreateDirectory(folder);
                 }
 
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                string json = JsonSerializer.Serialize(CurrentSettings, options);
-                File.WriteAllText(SettingsFilePath, json);
+                string json = JsonSerializer.Serialize(CurrentSettings, JsonOptions);
+                string tempPath = _settingsFilePath + ".tmp";
+                File.WriteAllText(tempPath, json);
+                File.Move(tempPath, _settingsFilePath, overwrite: true);
 
                 SettingsUpdated?.Invoke(CurrentSettings);
             }

@@ -1,14 +1,17 @@
 using System;
+using System.Text.RegularExpressions;
 
 namespace WPMOverlay.Models
 {
     public class AppSettings
     {
+        private static readonly Regex HexColorRegex = new(@"^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$", RegexOptions.Compiled);
+
         public string ThemePreset { get; set; } = "CyberDark";
 
-        // Color Tokens (using color theory principles)
+        // Color Tokens (aligned with CyberDark preset)
         public string BackgroundHex { get; set; } = "#EE12141A"; // Deep Charcoal with 93% opacity
-        public string BorderHex { get; set; } = "#3B82F6";       // Vibrant Blue border
+        public string BorderHex { get; set; } = "#2563EB";       // Vibrant Blue border
         public string AccentHex { get; set; } = "#38BDF8";       // Sky Blue (high contrast accent)
         public string TextPrimaryHex { get; set; } = "#F8FAFC";  // Slate 50
         public string TextSecondaryHex { get; set; } = "#94A3B8";// Slate 400
@@ -17,13 +20,12 @@ namespace WPMOverlay.Models
         // Dimensions and Opacity
         public double WindowOpacity { get; set; } = 0.95;
         public double ScaleFactor { get; set; } = 1.0;
-        public double PositionX { get; set; } = -1; // -1 means default positioning
-        public double PositionY { get; set; } = -1;
+        public double? PositionX { get; set; } = null; // null means default positioning (allows negative multi-monitor coordinates)
+        public double? PositionY { get; set; } = null;
 
-        // Auto-Hide & Idle Settings
+        // Auto-Hide Settings
         public bool AutoHideEnabled { get; set; } = true;
         public double AutoHideDelaySeconds { get; set; } = 4.0;
-        public string IdleDisplayMode { get; set; } = "ShowLastSession";
 
         // Metric Toggles (Matching hand-drawn sketch)
         public bool Show15s { get; set; } = true;
@@ -42,6 +44,64 @@ namespace WPMOverlay.Models
         public static AppSettings CreateDefault()
         {
             return new AppSettings();
+        }
+
+        public AppSettings Clone()
+        {
+            return new AppSettings
+            {
+                ThemePreset = ThemePreset,
+                BackgroundHex = BackgroundHex,
+                BorderHex = BorderHex,
+                AccentHex = AccentHex,
+                TextPrimaryHex = TextPrimaryHex,
+                TextSecondaryHex = TextSecondaryHex,
+                HighlightHex = HighlightHex,
+                WindowOpacity = WindowOpacity,
+                ScaleFactor = ScaleFactor,
+                PositionX = PositionX,
+                PositionY = PositionY,
+                AutoHideEnabled = AutoHideEnabled,
+                AutoHideDelaySeconds = AutoHideDelaySeconds,
+                Show15s = Show15s,
+                Show30s = Show30s,
+                Show60s = Show60s,
+                Show5m = Show5m,
+                ShowTop = ShowTop,
+                ShowAvg = ShowAvg,
+                ShowLast = ShowLast,
+                AlwaysOnTop = AlwaysOnTop,
+                StartWithWindows = StartWithWindows,
+                ErrorPenaltyMultiplier = ErrorPenaltyMultiplier
+            };
+        }
+
+        public void Sanitize()
+        {
+            var defaults = CreateDefault();
+
+            if (string.IsNullOrWhiteSpace(ThemePreset))
+                ThemePreset = defaults.ThemePreset;
+
+            BackgroundHex = IsValidHexColor(BackgroundHex) ? BackgroundHex : defaults.BackgroundHex;
+            BorderHex = IsValidHexColor(BorderHex) ? BorderHex : defaults.BorderHex;
+            AccentHex = IsValidHexColor(AccentHex) ? AccentHex : defaults.AccentHex;
+            TextPrimaryHex = IsValidHexColor(TextPrimaryHex) ? TextPrimaryHex : defaults.TextPrimaryHex;
+            TextSecondaryHex = IsValidHexColor(TextSecondaryHex) ? TextSecondaryHex : defaults.TextSecondaryHex;
+            HighlightHex = IsValidHexColor(HighlightHex) ? HighlightHex : defaults.HighlightHex;
+
+            WindowOpacity = double.IsFinite(WindowOpacity) ? Math.Clamp(WindowOpacity, 0.2, 1.0) : defaults.WindowOpacity;
+            ScaleFactor = double.IsFinite(ScaleFactor) ? Math.Clamp(ScaleFactor, 0.5, 2.0) : defaults.ScaleFactor;
+            AutoHideDelaySeconds = double.IsFinite(AutoHideDelaySeconds) ? Math.Clamp(AutoHideDelaySeconds, 1.0, 15.0) : defaults.AutoHideDelaySeconds;
+            ErrorPenaltyMultiplier = double.IsFinite(ErrorPenaltyMultiplier) ? Math.Clamp(ErrorPenaltyMultiplier, 0.5, 2.0) : defaults.ErrorPenaltyMultiplier;
+
+            if (PositionX.HasValue && !double.IsFinite(PositionX.Value)) PositionX = null;
+            if (PositionY.HasValue && !double.IsFinite(PositionY.Value)) PositionY = null;
+        }
+
+        private static bool IsValidHexColor(string? value)
+        {
+            return !string.IsNullOrWhiteSpace(value) && HexColorRegex.IsMatch(value);
         }
 
         public void ApplyThemePreset(string preset)

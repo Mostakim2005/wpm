@@ -1,11 +1,15 @@
 using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
+using System.Windows.Interop;
 using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 using System.Windows.Threading;
-using WpfColor = System.Windows.Media.Color;
+using WpfApplication = System.Windows.Application;
+using WpfMessageBox = System.Windows.MessageBox;
 using WPMOverlay.Models;
 using WPMOverlay.Services;
 using Forms = System.Windows.Forms;
@@ -14,6 +18,17 @@ namespace WPMOverlay.Views
 {
     public partial class MainWindow : Window
     {
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_TRANSPARENT = 0x00000020;
+        private const int WS_EX_NOACTIVATE = 0x08000000;
+        private const double EngineSessionIdleSeconds = 5.0;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
         private readonly KeyboardHook _keyboardHook;
         private readonly DatabaseService _databaseService;
         private readonly SettingsService _settingsService;
@@ -21,29 +36,43 @@ namespace WPMOverlay.Views
         private readonly DispatcherTimer _autoHideGraceTimer;
 
         private Forms.NotifyIcon? _trayIcon;
+        private Forms.ContextMenuStrip? _trayContextMenu;
+        private System.Drawing.Icon? _trayCustomIcon;
+        private string? _lastTrayText;
+
         private bool _isHovered = false;
         private bool _isExplicitlyHidden = false;
-        private bool _isSettingsOpen = false;
+        private bool _isDialogOpen = false;
+        private bool _isCleanedUp = false;
+        private bool? _lastActiveVisualState;
+        private IntPtr _hwnd = IntPtr.Zero;
+
+        private HistoryWindow? _activeHistoryWindow;
+        private SettingsWindow? _activeSettingsWindow;
 
         // Coalescing state for non-blocking UI metrics dispatch
         private readonly object _snapshotLock = new();
         private MetricsSnapshot _latestSnapshot;
         private int _metricsDispatchPending;
 
-        public MainWindow()
+        public MainWindow() : this(null)
+        {
+        }
+
+        public MainWindow(SettingsService? settingsService)
         {
             InitializeComponent();
 
             _keyboardHook = new KeyboardHook();
             _databaseService = new DatabaseService();
-            _settingsService = new SettingsService();
+            _settingsService = settingsService ?? new SettingsService();
             _typingEngine = new TypingEngine(_keyboardHook, _databaseService, _settingsService);
 
             _autoHideGraceTimer = new DispatcherTimer();
             _autoHideGraceTimer.Tick += (s, e) =>
             {
                 _autoHideGraceTimer.Stop();
-                if (!_typingEngine.IsTypingActive && _settingsService.CurrentSettings.AutoHideEnabled && !_isHovered && !_isSettingsOpen && !_isExplicitlyHidden)
+                if (!_typingEngine.IsTypingActive && _settingsService.CurrentSettings.AutoHideEnabled && !_isHovered && !_isDialogOpen && !_isExplicitlyHidden)
                 {
                     StartFadeOut();
                 }
@@ -60,6 +89,33 @@ namespace WPMOverlay.Views
             Closing += MainWindow_Closing;
         }
 
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            _hwnd = new WindowInteropHelper(this).Handle;
+            if (_hwnd != IntPtr.Zero)
+            {
+                int exStyle = GetWindowLong(_hwnd, GWL_EXSTYLE);
+                SetWindowLong(_hwnd, GWL_EXSTYLE, exStyle | WS_EX_NOACTIVATE);
+            }
+        }
+
+        private void SetClickThrough(bool clickThrough)
+        {
+            IsHitTestVisible = !clickThrough;
+
+            if (_hwnd == IntPtr.Zero) return;
+            int exStyle = GetWindowLong(_hwnd, GWL_EXSTYLE);
+            if (clickThrough)
+            {
+                SetWindowLong(_hwnd, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT);
+            }
+            else
+            {
+                SetWindowLong(_hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TRANSPARENT);
+            }
+        }
+
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             SetupTrayIcon();
@@ -72,6 +128,14 @@ namespace WPMOverlay.Views
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            CleanupResources();
+        }
+
+        public void CleanupResources()
+        {
+            if (_isCleanedUp) return;
+            _isCleanedUp = true;
+
             _autoHideGraceTimer.Stop();
             _settingsService.SettingsUpdated -= OnSettingsUpdated;
             _typingEngine.MetricsUpdated -= OnMetricsUpdated;
@@ -83,62 +147,92 @@ namespace WPMOverlay.Views
             if (_trayIcon != null)
             {
                 _trayIcon.Visible = false;
+                _trayIcon.ContextMenuStrip = null;
                 _trayIcon.Dispose();
+                _trayIcon = null;
+            }
+
+            if (_trayContextMenu != null)
+            {
+                _trayContextMenu.Dispose();
+                _trayContextMenu = null;
+            }
+
+            if (_trayCustomIcon != null)
+            {
+                _trayCustomIcon.Dispose();
+                _trayCustomIcon = null;
             }
         }
 
         private void SetupTrayIcon()
         {
-            System.Drawing.Icon? customIcon = null;
             try
             {
                 var iconUri = new Uri("pack://application:,,,/WPMOverlay;component/app_icon.ico");
-                var streamInfo = System.Windows.Application.GetResourceStream(iconUri);
+                var streamInfo = WpfApplication.GetResourceStream(iconUri);
                 if (streamInfo != null)
                 {
                     using (streamInfo.Stream)
                     {
-                        customIcon = new System.Drawing.Icon(streamInfo.Stream);
+                        _trayCustomIcon = new System.Drawing.Icon(streamInfo.Stream);
                     }
                 }
             }
             catch
             {
-                customIcon = System.Drawing.SystemIcons.Application;
+                _trayCustomIcon = null;
             }
 
             _trayIcon = new Forms.NotifyIcon
             {
-                Icon = customIcon ?? System.Drawing.SystemIcons.Application,
+                Icon = _trayCustomIcon ?? System.Drawing.SystemIcons.Application,
                 Text = "WPM Overlay - Typing Speed Tracker",
                 Visible = true
             };
+            _lastTrayText = _trayIcon.Text;
 
-            var contextMenu = new Forms.ContextMenuStrip();
-            contextMenu.Items.Add("Show / Hide Overlay", null, (s, e) => Dispatcher.BeginInvoke(new Action(ToggleOverlayVisibility)));
-            contextMenu.Items.Add("History & Analytics", null, (s, e) => Dispatcher.BeginInvoke(new Action(OpenHistoryWindow)));
-            contextMenu.Items.Add("Settings", null, (s, e) => Dispatcher.BeginInvoke(new Action(OpenSettingsWindow)));
-            contextMenu.Items.Add("-");
-            contextMenu.Items.Add("Exit", null, (s, e) => Dispatcher.BeginInvoke(new Action(ExitApplication)));
+            _trayContextMenu = new Forms.ContextMenuStrip();
+            _trayContextMenu.Items.Add("Show / Hide Overlay", null, (s, e) => Dispatcher.BeginInvoke(new Action(ToggleOverlayVisibility)));
+            _trayContextMenu.Items.Add("History & Analytics", null, (s, e) => Dispatcher.BeginInvoke(new Action(OpenHistoryWindow)));
+            _trayContextMenu.Items.Add("Settings", null, (s, e) => Dispatcher.BeginInvoke(new Action(OpenSettingsWindow)));
+            _trayContextMenu.Items.Add("-");
+            _trayContextMenu.Items.Add("Exit", null, (s, e) => Dispatcher.BeginInvoke(new Action(ExitApplication)));
 
-            _trayIcon.ContextMenuStrip = contextMenu;
+            _trayIcon.ContextMenuStrip = _trayContextMenu;
             _trayIcon.DoubleClick += (s, e) => Dispatcher.BeginInvoke(new Action(ToggleOverlayVisibility));
         }
 
         private void RestorePosition()
         {
             var settings = _settingsService.CurrentSettings;
-            if (settings.PositionX >= 0 && settings.PositionY >= 0)
+            double width = ActualWidth > 0 ? ActualWidth : 260;
+            double height = ActualHeight > 0 ? ActualHeight : 120;
+
+            double virtualLeft = SystemParameters.VirtualScreenLeft;
+            double virtualTop = SystemParameters.VirtualScreenTop;
+            double virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
+            double virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
+
+            if (settings.PositionX.HasValue && settings.PositionY.HasValue)
             {
-                Left = settings.PositionX;
-                Top = settings.PositionY;
+                double x = settings.PositionX.Value;
+                double y = settings.PositionY.Value;
+
+                // Clamp inside current virtual screen bounds (supports negative multi-monitor coordinates
+                // and recovers cleanly if a previously used monitor was disconnected)
+                double maxLeft = Math.Max(virtualLeft, virtualRight - width);
+                double maxTop = Math.Max(virtualTop, virtualBottom - height);
+
+                Left = Math.Clamp(x, virtualLeft, maxLeft);
+                Top = Math.Clamp(y, virtualTop, maxTop);
             }
             else
             {
-                // Default position: Top Right corner
-                var screenWidth = SystemParameters.PrimaryScreenWidth;
-                Left = screenWidth - ActualWidth - 40;
-                Top = 40;
+                // Default position: Top Right corner of the primary WorkArea (respects taskbar)
+                var workArea = SystemParameters.WorkArea;
+                Left = Math.Max(workArea.Left, workArea.Right - width - 40);
+                Top = workArea.Top + 40;
             }
         }
 
@@ -176,12 +270,31 @@ namespace WPMOverlay.Views
             RowAvg.Visibility = s.ShowAvg ? Visibility.Visible : Visibility.Collapsed;
             RowLast.Visibility = s.ShowLast ? Visibility.Visible : Visibility.Collapsed;
 
+            // Dynamically collapse empty columns and divider when all rows in a column are hidden
+            bool hasLeft = s.Show15s || s.Show30s || s.Show60s || s.Show5m;
+            bool hasRight = s.ShowTop || s.ShowAvg || s.ShowLast;
+
+            LeftMetricsColumn.Visibility = hasLeft ? Visibility.Visible : Visibility.Collapsed;
+            LeftColDef.MinWidth = hasLeft ? 110 : 0;
+            LeftMetricsColumn.Margin = hasLeft && hasRight ? new Thickness(0, 0, 10, 0) : new Thickness(0);
+
+            RightMetricsColumn.Visibility = hasRight ? Visibility.Visible : Visibility.Collapsed;
+            RightColDef.MinWidth = hasRight ? 100 : 0;
+            RightMetricsColumn.Margin = hasLeft && hasRight ? new Thickness(10, 0, 0, 0) : new Thickness(0);
+
+            bool showDivider = hasLeft && hasRight;
+            VerticalDivider.Visibility = showDivider ? Visibility.Visible : Visibility.Collapsed;
+            DividerColDef.Width = showDivider ? new GridLength(1) : new GridLength(0);
+
             Topmost = s.AlwaysOnTop;
             MenuTopmost.IsChecked = s.AlwaysOnTop;
 
             if (!_isExplicitlyHidden)
             {
+                // Clear any HoldEnd Opacity animation clock before assigning local Opacity
+                BeginAnimation(OpacityProperty, null);
                 Opacity = s.WindowOpacity;
+                SetClickThrough(false);
             }
         }
 
@@ -226,10 +339,6 @@ namespace WPMOverlay.Views
                 ValueAvg.Text = $"{Math.Round(summary.OverallAvgWpm)}";
                 ValueLast.Text = $"{Math.Round(summary.LastSessionWpm)}";
 
-                StatusDot.Fill = new SolidColorBrush(WpfColor.FromRgb(16, 185, 129)); // Green
-                StatusText.Text = "Live";
-                StatusText.Foreground = new SolidColorBrush(WpfColor.FromRgb(16, 185, 129));
-
                 AccuracyText.Text = $"{snapshot.CurrentAccuracy:F0}% Acc";
             }
             else
@@ -250,22 +359,40 @@ namespace WPMOverlay.Views
                 ValueAvg.Text = $"{Math.Round(summary.OverallAvgWpm)}";
                 ValueLast.Text = $"{Math.Round(lastAvg)}";
 
-                StatusDot.Fill = new SolidColorBrush(WpfColor.FromRgb(56, 189, 248)); // Blue
-                StatusText.Text = "Last";
-                StatusText.Foreground = new SolidColorBrush(WpfColor.FromRgb(56, 189, 248));
-
                 AccuracyText.Text = $"{snapshot.LastFinishedAccuracy:F0}% Acc";
+            }
+
+            // Update status pill via DynamicResource tokens only on state transition (Trap 2, zero per-tick allocations)
+            if (_lastActiveVisualState != active)
+            {
+                _lastActiveVisualState = active;
+                string token = active ? "AppHighlightBrush" : "AppAccentBrush";
+                StatusDot.SetResourceReference(Shape.FillProperty, token);
+                StatusText.SetResourceReference(TextBlock.ForegroundProperty, token);
+                StatusText.Text = active ? "Live" : "Last";
             }
 
             if (_trayIcon != null)
             {
-                _trayIcon.Text = $"WPM Overlay | Top: {Math.Round(summary.AllTimeTopWpm)} | Last: {Math.Round(summary.LastSessionWpm)}";
+                string trayText = $"WPM Overlay | Top: {Math.Round(summary.AllTimeTopWpm)} | Last: {Math.Round(summary.LastSessionWpm)}";
+                if (trayText.Length > 63)
+                {
+                    trayText = trayText[..63];
+                }
+
+                if (!string.Equals(_lastTrayText, trayText, StringComparison.Ordinal))
+                {
+                    _lastTrayText = trayText;
+                    _trayIcon.Text = trayText;
+                }
             }
         }
 
         private void StartFadeIn()
         {
             if (_isExplicitlyHidden) return;
+            SetClickThrough(false);
+
             var anim = new DoubleAnimation
             {
                 To = _settingsService.CurrentSettings.WindowOpacity,
@@ -277,7 +404,7 @@ namespace WPMOverlay.Views
 
         private void StartFadeOut()
         {
-            if (_isExplicitlyHidden || _isHovered || _isSettingsOpen) return;
+            if (_isExplicitlyHidden || _isHovered || _isDialogOpen) return;
             if (_settingsService.CurrentSettings.AutoHideEnabled)
             {
                 var anim = new DoubleAnimation
@@ -286,18 +413,30 @@ namespace WPMOverlay.Views
                     Duration = TimeSpan.FromMilliseconds(600),
                     EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
                 };
+                anim.Completed += (s, e) =>
+                {
+                    if (!_typingEngine.IsTypingActive && !_isHovered && !_isDialogOpen && !_isExplicitlyHidden && Opacity < 0.05)
+                    {
+                        SetClickThrough(true);
+                    }
+                };
                 BeginAnimation(OpacityProperty, anim);
             }
         }
 
-        private void TriggerAutoHideGracePeriod()
+        private void TriggerAutoHideGracePeriod(double? overrideDelaySeconds = null)
         {
-            if (_isHovered || _isSettingsOpen || _isExplicitlyHidden || !_settingsService.CurrentSettings.AutoHideEnabled) return;
+            if (_isHovered || _isDialogOpen || _isExplicitlyHidden || !_settingsService.CurrentSettings.AutoHideEnabled) return;
 
             if (!_typingEngine.IsTypingActive)
             {
-                double delaySec = _settingsService.CurrentSettings.AutoHideDelaySeconds;
-                if (delaySec < 1.0) delaySec = 1.0;
+                double delaySec = overrideDelaySeconds ?? _settingsService.CurrentSettings.AutoHideDelaySeconds;
+                if (delaySec <= 0)
+                {
+                    StartFadeOut();
+                    return;
+                }
+
                 _autoHideGraceTimer.Stop();
                 _autoHideGraceTimer.Interval = TimeSpan.FromSeconds(delaySec);
                 _autoHideGraceTimer.Start();
@@ -319,7 +458,9 @@ namespace WPMOverlay.Views
             if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                StartFadeOut();
+                double configuredDelay = _settingsService.CurrentSettings.AutoHideDelaySeconds;
+                double remainingDelay = configuredDelay - EngineSessionIdleSeconds;
+                TriggerAutoHideGracePeriod(remainingDelay);
             }), DispatcherPriority.Background);
         }
 
@@ -327,8 +468,14 @@ namespace WPMOverlay.Views
         {
             if (e.ButtonState == MouseButtonState.Pressed)
             {
-                DragMove();
-                SavePosition();
+                try
+                {
+                    DragMove();
+                    SavePosition();
+                }
+                catch (InvalidOperationException)
+                {
+                }
             }
         }
 
@@ -343,6 +490,7 @@ namespace WPMOverlay.Views
             _autoHideGraceTimer.Stop();
             if (!_isExplicitlyHidden)
             {
+                SetClickThrough(false);
                 BeginAnimation(OpacityProperty, null);
                 Opacity = _settingsService.CurrentSettings.WindowOpacity;
             }
@@ -361,12 +509,15 @@ namespace WPMOverlay.Views
             {
                 _autoHideGraceTimer.Stop();
                 BeginAnimation(OpacityProperty, null);
-                Opacity = 0.0;
+                Hide();
             }
             else
             {
+                SetClickThrough(false);
                 BeginAnimation(OpacityProperty, null);
                 Opacity = _settingsService.CurrentSettings.WindowOpacity;
+                Show();
+                TriggerAutoHideGracePeriod();
             }
         }
 
@@ -390,60 +541,104 @@ namespace WPMOverlay.Views
             _isExplicitlyHidden = true;
             _autoHideGraceTimer.Stop();
             BeginAnimation(OpacityProperty, null);
-            Opacity = 0.0;
+            Hide();
         }
 
         private void MenuExit_Click(object sender, RoutedEventArgs e) => ExitApplication();
 
         private void OpenHistoryWindow()
         {
+            if (_activeHistoryWindow != null)
+            {
+                _activeHistoryWindow.Activate();
+                return;
+            }
+
             try
             {
+                _isDialogOpen = true;
+                _autoHideGraceTimer.Stop();
+
+                if (!_isExplicitlyHidden)
+                {
+                    SetClickThrough(false);
+                    BeginAnimation(OpacityProperty, null);
+                    Opacity = _settingsService.CurrentSettings.WindowOpacity;
+                }
+
                 var historyWin = new HistoryWindow(_databaseService, _typingEngine);
-                historyWin.Owner = this;
+                historyWin.Owner = IsVisible ? this : null;
+                _activeHistoryWindow = historyWin;
                 historyWin.ShowDialog();
-                _typingEngine.RefreshStatsSummary();
+
                 UpdateVisuals(_typingEngine.GetCurrentSnapshot());
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error opening history window: {ex}");
-                System.Windows.MessageBox.Show($"Failed to open History: {ex.Message}", "History Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                WpfMessageBox.Show($"Failed to open History: {ex.Message}", "History Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _activeHistoryWindow = null;
+                _isDialogOpen = false;
+                TriggerAutoHideGracePeriod();
             }
         }
 
         private void OpenSettingsWindow()
         {
+            if (_activeSettingsWindow != null)
+            {
+                _activeSettingsWindow.Activate();
+                return;
+            }
+
             try
             {
-                _isSettingsOpen = true;
+                _isDialogOpen = true;
                 _autoHideGraceTimer.Stop();
 
-                // Stop any ongoing fade-out and guarantee overlay is 100% visible on screen while configuring
-                BeginAnimation(OpacityProperty, null);
-                Opacity = _settingsService.CurrentSettings.WindowOpacity;
+                // Stop any ongoing fade-out and guarantee overlay is visible while configuring
+                if (!_isExplicitlyHidden)
+                {
+                    SetClickThrough(false);
+                    BeginAnimation(OpacityProperty, null);
+                    Opacity = _settingsService.CurrentSettings.WindowOpacity;
+                }
 
                 var settingsWin = new SettingsWindow(_settingsService);
-                settingsWin.Owner = this;
-                settingsWin.ShowDialog();
+                settingsWin.Owner = IsVisible ? this : null;
+                settingsWin.PreviewSettingsRequested += ApplySettings;
+                _activeSettingsWindow = settingsWin;
+
+                try
+                {
+                    settingsWin.ShowDialog();
+                }
+                finally
+                {
+                    settingsWin.PreviewSettingsRequested -= ApplySettings;
+                }
 
                 ApplySettings(_settingsService.CurrentSettings);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error opening settings window: {ex}");
-                System.Windows.MessageBox.Show($"Failed to open Settings: {ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                WpfMessageBox.Show($"Failed to open Settings: {ex.Message}", "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
-                _isSettingsOpen = false;
+                _activeSettingsWindow = null;
+                _isDialogOpen = false;
                 TriggerAutoHideGracePeriod();
             }
         }
 
         private void ExitApplication()
         {
-            System.Windows.Application.Current.Shutdown();
+            WpfApplication.Current.Shutdown();
         }
     }
 }
