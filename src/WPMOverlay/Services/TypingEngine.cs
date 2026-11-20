@@ -1,19 +1,30 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Timers;
+using System.Threading;
+using System.Threading.Tasks;
 using WPMOverlay.Models;
 
 namespace WPMOverlay.Services
 {
     public class TypingEngine : IDisposable
     {
+        private readonly record struct RawKeyEvent(DateTime Timestamp, int VkCode, bool IsBackspace);
+
         private readonly KeyboardHook _hook;
         private readonly DatabaseService _database;
         private readonly SettingsService _settingsService;
-        private readonly System.Timers.Timer _calcTimer;
 
         private readonly object _lock = new();
+        private readonly ConcurrentQueue<RawKeyEvent> _pendingKeys = new();
+        private readonly SemaphoreSlim _wakeSignal = new(0, 1);
+        private int _isIdleSleeping;
+
+        private CancellationTokenSource? _loopCts;
+        private Task? _loopTask;
+        private bool _disposed;
+
         private readonly List<KeystrokeRecord> _rollingBuffer = new();
 
         // Smart Filtering & Anti-Spam State
@@ -48,13 +59,13 @@ namespace WPMOverlay.Services
         public double Current5mWpm { get; private set; } = 0;
         public double CurrentInstantWpm { get; private set; } = 0;
         public double CurrentAccuracy { get; private set; } = 100;
-        public bool IsTypingActive => _isSessionActive;
+        public bool IsTypingActive => Volatile.Read(ref _isSessionActive);
 
         // Overall Records
         public StatsSummary CachedSummary { get; private set; } = new();
 
-        // Events for UI
-        public event Action? MetricsUpdated;
+        // Events for UI (always invoked outside _lock)
+        public event Action<MetricsSnapshot>? MetricsUpdated;
         public event Action? TypingStarted;
         public event Action? TypingIdle;
 
@@ -68,43 +79,102 @@ namespace WPMOverlay.Services
             RefreshStatsSummary();
 
             _hook.KeyPressed += OnKeyPressed;
-
-            _calcTimer = new System.Timers.Timer(150); // Refresh ~6.6 times/sec
-            _calcTimer.Elapsed += OnCalcTimerElapsed;
-            _calcTimer.AutoReset = true;
         }
 
         public void Start()
         {
+            if (_disposed) return;
+
             _hook.Start();
-            _calcTimer.Start();
+
+            if (_loopCts == null)
+            {
+                _loopCts = new CancellationTokenSource();
+                _loopTask = Task.Run(() => RunCalcLoopAsync(_loopCts.Token));
+            }
         }
 
         public void Stop()
         {
-            _calcTimer.Stop();
             _hook.Stop();
 
+            if (_loopCts != null)
+            {
+                _loopCts.Cancel();
+                WakeLoop();
+                try
+                {
+                    _loopTask?.Wait(TimeSpan.FromSeconds(2));
+                }
+                catch (AggregateException)
+                {
+                }
+                _loopCts.Dispose();
+                _loopCts = null;
+                _loopTask = null;
+            }
+
+            TypingSession? completedSession = null;
             lock (_lock)
             {
+                DrainPendingKeysLocked(out _);
                 if (_isSessionActive)
                 {
-                    EndSession();
+                    completedSession = FinalizeSessionLocked();
                 }
+            }
+
+            if (completedSession != null)
+            {
+                _database.SaveSession(completedSession);
+                RefreshStatsSummary();
             }
         }
 
         public void RefreshStatsSummary()
         {
-            CachedSummary = _database.GetStatsSummary();
-            if (LastFinishedAvgWpm == 0 && CachedSummary.LastSessionWpm > 0)
+            var summary = _database.GetStatsSummary();
+            MetricsSnapshot snapshot;
+            lock (_lock)
             {
-                LastFinishedAvgWpm = CachedSummary.LastSessionWpm;
-                LastFinished15sWpm = CachedSummary.LastSession15sWpm;
-                LastFinished30sWpm = CachedSummary.LastSession30sWpm;
-                LastFinished60sWpm = CachedSummary.LastSession60sWpm;
-                LastFinished5mWpm = CachedSummary.LastSessionWpm;
+                CachedSummary = summary;
+                if (LastFinishedAvgWpm == 0 && CachedSummary.LastSessionWpm > 0)
+                {
+                    LastFinishedAvgWpm = CachedSummary.LastSessionWpm;
+                    LastFinished15sWpm = CachedSummary.LastSession15sWpm;
+                    LastFinished30sWpm = CachedSummary.LastSession30sWpm;
+                    LastFinished60sWpm = CachedSummary.LastSession60sWpm;
+                    LastFinished5mWpm = CachedSummary.LastSessionWpm;
+                }
+                snapshot = BuildSnapshotLocked();
             }
+            MetricsUpdated?.Invoke(snapshot);
+        }
+
+        public MetricsSnapshot GetCurrentSnapshot()
+        {
+            lock (_lock)
+            {
+                return BuildSnapshotLocked();
+            }
+        }
+
+        private MetricsSnapshot BuildSnapshotLocked()
+        {
+            return new MetricsSnapshot(
+                IsTypingActive: _isSessionActive,
+                Current15sWpm: Current15sWpm,
+                Current30sWpm: Current30sWpm,
+                Current60sWpm: Current60sWpm,
+                Current5mWpm: Current5mWpm,
+                CurrentAccuracy: CurrentAccuracy,
+                LastFinishedAvgWpm: LastFinishedAvgWpm,
+                LastFinished15sWpm: LastFinished15sWpm,
+                LastFinished30sWpm: LastFinished30sWpm,
+                LastFinished60sWpm: LastFinished60sWpm,
+                LastFinished5mWpm: LastFinished5mWpm,
+                LastFinishedAccuracy: LastFinishedAccuracy,
+                Summary: CachedSummary);
         }
 
         /// <summary>
@@ -184,16 +254,70 @@ namespace WPMOverlay.Services
             return true;
         }
 
+        /// <summary>
+        /// Called directly from WH_KEYBOARD_LL HookCallback.
+        /// Must remain lock-free, allocation-free, and O(1) (Trap 3).
+        /// </summary>
         private void OnKeyPressed(int vkCode, bool isBackspace)
         {
-            DateTime now = DateTime.UtcNow;
+            _pendingKeys.Enqueue(new RawKeyEvent(DateTime.UtcNow, vkCode, isBackspace));
+            WakeLoop();
+        }
 
-            lock (_lock)
+        private void WakeLoop()
+        {
+            if (Interlocked.Exchange(ref _isIdleSleeping, 0) == 1)
             {
-                // Apply smart filtering to reject spam and accidental holds
-                if (!IsValidTypingKeystroke(vkCode, isBackspace, now))
+                _wakeSignal.Release();
+            }
+        }
+
+        private async Task RunCalcLoopAsync(CancellationToken ct)
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(150));
+
+            try
+            {
+                while (!ct.IsCancellationRequested)
                 {
-                    return;
+                    bool shouldSleep = ProcessTick();
+
+                    if (shouldSleep)
+                    {
+                        Interlocked.Exchange(ref _isIdleSleeping, 1);
+                        if (!_pendingKeys.IsEmpty)
+                        {
+                            if (Interlocked.Exchange(ref _isIdleSleeping, 0) == 1)
+                            {
+                                _wakeSignal.Release();
+                            }
+                            continue;
+                        }
+
+                        await _wakeSignal.WaitAsync(ct).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    if (!await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
+                    {
+                        break;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        private void DrainPendingKeysLocked(out bool startedTyping)
+        {
+            startedTyping = false;
+
+            while (_pendingKeys.TryDequeue(out var raw))
+            {
+                if (!IsValidTypingKeystroke(raw.VkCode, raw.IsBackspace, raw.Timestamp))
+                {
+                    continue;
                 }
 
                 bool wasIdle = !_isSessionActive;
@@ -201,7 +325,7 @@ namespace WPMOverlay.Services
                 if (!_isSessionActive)
                 {
                     _isSessionActive = true;
-                    _sessionStartTime = now;
+                    _sessionStartTime = raw.Timestamp;
                     _sessionGrossKeys = 0;
                     _sessionBackspaces = 0;
                     _sessionPeak15s = 0;
@@ -209,28 +333,35 @@ namespace WPMOverlay.Services
                     _sessionPeak60s = 0;
                 }
 
-                _lastKeystrokeTime = now;
+                _lastKeystrokeTime = raw.Timestamp;
                 _sessionGrossKeys++;
-                if (isBackspace)
+                if (raw.IsBackspace)
                 {
                     _sessionBackspaces++;
                 }
 
-                _rollingBuffer.Add(new KeystrokeRecord(now, isBackspace, vkCode));
+                _rollingBuffer.Add(new KeystrokeRecord(raw.Timestamp, raw.IsBackspace, raw.VkCode));
 
                 if (wasIdle)
                 {
-                    TypingStarted?.Invoke();
+                    startedTyping = true;
                 }
             }
         }
 
-        private void OnCalcTimerElapsed(object? sender, ElapsedEventArgs e)
+        private bool ProcessTick()
         {
             DateTime now = DateTime.UtcNow;
+            bool startedTyping;
+            bool wentIdle = false;
+            TypingSession? completedSession = null;
+            MetricsSnapshot snapshot;
+            bool canSleep;
 
             lock (_lock)
             {
+                DrainPendingKeysLocked(out startedTyping);
+
                 // Prune events older than 310 seconds (5 min + 10s buffer)
                 DateTime cutoff = now.AddSeconds(-310);
                 _rollingBuffer.RemoveAll(k => k.Timestamp < cutoff);
@@ -241,8 +372,8 @@ namespace WPMOverlay.Services
                 // Check for idle transition
                 if (_isSessionActive && (now - _lastKeystrokeTime).TotalSeconds > idleThreshold)
                 {
-                    EndSession();
-                    TypingIdle?.Invoke();
+                    completedSession = FinalizeSessionLocked();
+                    wentIdle = true;
                 }
 
                 double penalty = _settingsService.CurrentSettings.ErrorPenaltyMultiplier;
@@ -277,9 +408,35 @@ namespace WPMOverlay.Services
                     // Recalculate recent sustained WPM in background
                     Current5mWpm = CalculateSustained5mWpm(now, penalty);
                 }
+
+                snapshot = BuildSnapshotLocked();
+                canSleep = !_isSessionActive && _rollingBuffer.Count == 0 && _pendingKeys.IsEmpty;
             }
 
-            MetricsUpdated?.Invoke();
+            // Perform all SQLite I/O and event dispatches strictly OUTSIDE _lock
+            if (startedTyping)
+            {
+                TypingStarted?.Invoke();
+            }
+
+            if (completedSession != null)
+            {
+                _database.SaveSession(completedSession);
+                var updatedSummary = _database.GetStatsSummary();
+                lock (_lock)
+                {
+                    CachedSummary = updatedSummary;
+                    snapshot = BuildSnapshotLocked();
+                }
+            }
+
+            if (wentIdle)
+            {
+                TypingIdle?.Invoke();
+            }
+
+            MetricsUpdated?.Invoke(snapshot);
+            return canSleep;
         }
 
         private double CalculateWindowWpm(DateTime now, double windowSeconds, double penalty)
@@ -351,7 +508,7 @@ namespace WPMOverlay.Services
             return activeMinutes > 0 ? (netWords / activeMinutes) : 0;
         }
 
-        private void EndSession()
+        private TypingSession? FinalizeSessionLocked()
         {
             _isSessionActive = false;
 
@@ -373,7 +530,15 @@ namespace WPMOverlay.Services
                     accuracy = Math.Min(100.0, (correct / _sessionGrossKeys) * 100.0);
                 }
 
-                var session = new TypingSession
+                // Update Idle Retention metrics
+                LastFinishedAvgWpm = avgWpm;
+                LastFinished15sWpm = _sessionPeak15s;
+                LastFinished30sWpm = _sessionPeak30s;
+                LastFinished60sWpm = _sessionPeak60s;
+                LastFinished5mWpm = Current5mWpm > 0 ? Current5mWpm : avgWpm;
+                LastFinishedAccuracy = accuracy;
+
+                return new TypingSession
                 {
                     StartedAt = _sessionStartTime,
                     EndedAt = _lastKeystrokeTime,
@@ -387,25 +552,17 @@ namespace WPMOverlay.Services
                     Peak60sWpm = _sessionPeak60s,
                     AccuracyPercent = accuracy
                 };
-
-                _database.SaveSession(session);
-
-                // Update Idle Retention metrics
-                LastFinishedAvgWpm = avgWpm;
-                LastFinished15sWpm = _sessionPeak15s;
-                LastFinished30sWpm = _sessionPeak30s;
-                LastFinished60sWpm = _sessionPeak60s;
-                LastFinished5mWpm = Current5mWpm > 0 ? Current5mWpm : avgWpm;
-                LastFinishedAccuracy = accuracy;
-
-                RefreshStatsSummary();
             }
+
+            return null;
         }
 
         public void ResetSession()
         {
+            MetricsSnapshot snapshot;
             lock (_lock)
             {
+                while (_pendingKeys.TryDequeue(out _)) { }
                 _rollingBuffer.Clear();
                 _isSessionActive = false;
                 _sessionGrossKeys = 0;
@@ -421,14 +578,19 @@ namespace WPMOverlay.Services
                 _unbrokenCharsWithoutBoundary = 0;
                 _recentKeyHistory.Clear();
                 _lastRawKeystrokeTime = DateTime.MinValue;
+                snapshot = BuildSnapshotLocked();
             }
-            MetricsUpdated?.Invoke();
+            MetricsUpdated?.Invoke(snapshot);
         }
 
         public void Dispose()
         {
+            if (_disposed) return;
+            _disposed = true;
+
+            _hook.KeyPressed -= OnKeyPressed;
             Stop();
-            _calcTimer.Dispose();
+            _wakeSignal.Dispose();
             _hook.Dispose();
             GC.SuppressFinalize(this);
         }

@@ -8,9 +8,14 @@ namespace WPMOverlay.Services
     {
         private const int WH_KEYBOARD_LL = 13;
         private const int WM_KEYDOWN = 0x0100;
+        private const int WM_KEYUP = 0x0101;
         private const int WM_SYSKEYDOWN = 0x0104;
+        private const int WM_SYSKEYUP = 0x0105;
 
-        // Virtual key codes for ignored modifiers
+        private const uint LLKHF_INJECTED = 0x10;
+        private const uint LLKHF_LOWER_IL_INJECTED = 0x02;
+
+        // Virtual key codes for modifiers & system/non-typing keys
         private const int VK_SHIFT = 0x10;
         private const int VK_CONTROL = 0x11;
         private const int VK_MENU = 0x12; // Alt
@@ -26,9 +31,21 @@ namespace WPMOverlay.Services
         private const int VK_RCONTROL = 0xA3;
         private const int VK_LMENU = 0xA4;
         private const int VK_RMENU = 0xA5;
+        private const int VK_NUMLOCK = 0x90;
+        private const int VK_SCROLL = 0x91;
 
         private const int VK_BACK = 0x08;
         private const int VK_DELETE = 0x2E;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KBDLLHOOKSTRUCT
+        {
+            public uint vkCode;
+            public uint scanCode;
+            public uint flags;
+            public uint time;
+            public UIntPtr dwExtraInfo;
+        }
 
         private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 
@@ -49,8 +66,20 @@ namespace WPMOverlay.Services
         private LowLevelKeyboardProc? _proc;
         private bool _disposed;
 
+        // Modifier key states tracked directly from hook events (no GetKeyState lag)
+        private bool _lCtrlDown;
+        private bool _rCtrlDown;
+        private bool _lAltDown;
+        private bool _rAltDown;
+        private bool _lWinDown;
+        private bool _rWinDown;
+
+        public bool IsHookActive => _hookId != IntPtr.Zero;
+        public int LastErrorCode { get; private set; }
+
         /// <summary>
-        /// Invoked when a typing key is pressed: (virtualKey, isBackspace)
+        /// Invoked when a typing key is pressed: (virtualKey, isBackspace).
+        /// Subscribers must be non-blocking and O(1) (Trap 3).
         /// </summary>
         public event Action<int, bool>? KeyPressed;
 
@@ -58,12 +87,19 @@ namespace WPMOverlay.Services
         {
             if (_hookId != IntPtr.Zero) return;
 
+            ResetModifierState();
             _proc = HookCallback;
-            using var curProcess = Process.GetCurrentProcess();
-            using var curModule = curProcess.MainModule;
-            string? moduleName = curModule?.ModuleName;
+            _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(null), 0);
 
-            _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(moduleName), 0);
+            if (_hookId == IntPtr.Zero)
+            {
+                LastErrorCode = Marshal.GetLastWin32Error();
+                Debug.WriteLine($"SetWindowsHookEx failed with Win32 error {LastErrorCode}.");
+            }
+            else
+            {
+                LastErrorCode = 0;
+            }
         }
 
         public void Stop()
@@ -73,35 +109,119 @@ namespace WPMOverlay.Services
                 UnhookWindowsHookEx(_hookId);
                 _hookId = IntPtr.Zero;
             }
+
+            ResetModifierState();
+        }
+
+        private void ResetModifierState()
+        {
+            _lCtrlDown = false;
+            _rCtrlDown = false;
+            _lAltDown = false;
+            _rAltDown = false;
+            _lWinDown = false;
+            _rWinDown = false;
         }
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            if (nCode >= 0 && (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN))
+            if (nCode >= 0)
             {
-                int vkCode = Marshal.ReadInt32(lParam);
+                int msg = wParam.ToInt32();
+                bool isKeyDown = msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN;
+                bool isKeyUp = msg == WM_KEYUP || msg == WM_SYSKEYUP;
 
-                if (!IsIgnoredModifier(vkCode))
+                if (isKeyDown || isKeyUp)
                 {
-                    bool isBackspace = (vkCode == VK_BACK || vkCode == VK_DELETE);
-                    KeyPressed?.Invoke(vkCode, isBackspace);
+                    var info = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
+                    int vkCode = (int)info.vkCode;
+
+                    UpdateModifierState(vkCode, isKeyDown);
+
+                    if (isKeyDown)
+                    {
+                        bool isInjected = (info.flags & (LLKHF_INJECTED | LLKHF_LOWER_IL_INJECTED)) != 0;
+                        if (!isInjected && !IsShortcutChordActive() && !IsIgnoredKey(vkCode))
+                        {
+                            bool isBackspace = vkCode == VK_BACK || vkCode == VK_DELETE;
+                            KeyPressed?.Invoke(vkCode, isBackspace);
+                        }
+                    }
                 }
             }
 
             return CallNextHookEx(_hookId, nCode, wParam, lParam);
         }
 
-        private static bool IsIgnoredModifier(int vk)
+        private void UpdateModifierState(int vkCode, bool isDown)
         {
+            switch (vkCode)
+            {
+                case VK_LCONTROL:
+                    _lCtrlDown = isDown;
+                    break;
+                case VK_RCONTROL:
+                    _rCtrlDown = isDown;
+                    break;
+                case VK_CONTROL:
+                    _lCtrlDown = isDown;
+                    break;
+                case VK_LMENU:
+                    _lAltDown = isDown;
+                    break;
+                case VK_RMENU:
+                    _rAltDown = isDown;
+                    break;
+                case VK_MENU:
+                    _lAltDown = isDown;
+                    break;
+                case VK_LWIN:
+                    _lWinDown = isDown;
+                    break;
+                case VK_RWIN:
+                    _rWinDown = isDown;
+                    break;
+            }
+        }
+
+        private bool IsShortcutChordActive()
+        {
+            if (_lWinDown || _rWinDown) return true;
+
+            bool ctrlDown = _lCtrlDown || _rCtrlDown;
+            // Allow AltGr (Left Ctrl + Right Alt) for international keyboard layouts
+            bool isAltGr = _lCtrlDown && _rAltDown;
+            if (ctrlDown && !isAltGr) return true;
+            if (_lAltDown && !ctrlDown) return true;
+
+            return false;
+        }
+
+        public static bool IsIgnoredKey(int vk)
+        {
+            // Navigation & editing control keys (PageUp..Down, PrintScreen, Insert)
+            if (vk >= 0x21 && vk <= 0x28) return true;
+            if (vk == 0x2C || vk == 0x2D) return true;
+
+            // Function keys F1-F24
+            if (vk >= 0x70 && vk <= 0x87) return true;
+
+            // Browser & Media keys
+            if (vk >= 0xA6 && vk <= 0xB7) return true;
+
             return vk switch
             {
                 VK_SHIFT => true,
                 VK_CONTROL => true,
                 VK_MENU => true,
+                VK_PAUSE => true,
                 VK_CAPITAL => true,
+                VK_ESCAPE => true,
                 VK_LWIN => true,
                 VK_RWIN => true,
                 VK_APPS => true,
+                VK_NUMLOCK => true,
+                VK_SCROLL => true,
                 VK_LSHIFT => true,
                 VK_RSHIFT => true,
                 VK_LCONTROL => true,
@@ -120,11 +240,6 @@ namespace WPMOverlay.Services
                 _disposed = true;
             }
             GC.SuppressFinalize(this);
-        }
-
-        ~KeyboardHook()
-        {
-            Stop();
         }
     }
 }

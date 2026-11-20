@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -23,6 +24,11 @@ namespace WPMOverlay.Views
         private bool _isHovered = false;
         private bool _isExplicitlyHidden = false;
         private bool _isSettingsOpen = false;
+
+        // Coalescing state for non-blocking UI metrics dispatch
+        private readonly object _snapshotLock = new();
+        private MetricsSnapshot _latestSnapshot;
+        private int _metricsDispatchPending;
 
         public MainWindow()
         {
@@ -60,8 +66,8 @@ namespace WPMOverlay.Views
             RestorePosition();
             _typingEngine.Start();
 
-            // Initial visual update
-            UpdateVisuals();
+            // Initial visual update from immutable snapshot (no UI-thread SQLite query)
+            UpdateVisuals(_typingEngine.GetCurrentSnapshot());
         }
 
         private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
@@ -109,14 +115,14 @@ namespace WPMOverlay.Views
             };
 
             var contextMenu = new Forms.ContextMenuStrip();
-            contextMenu.Items.Add("Show / Hide Overlay", null, (s, e) => ToggleOverlayVisibility());
-            contextMenu.Items.Add("History & Analytics", null, (s, e) => Dispatcher.Invoke(OpenHistoryWindow));
-            contextMenu.Items.Add("Settings", null, (s, e) => Dispatcher.Invoke(OpenSettingsWindow));
+            contextMenu.Items.Add("Show / Hide Overlay", null, (s, e) => Dispatcher.BeginInvoke(new Action(ToggleOverlayVisibility)));
+            contextMenu.Items.Add("History & Analytics", null, (s, e) => Dispatcher.BeginInvoke(new Action(OpenHistoryWindow)));
+            contextMenu.Items.Add("Settings", null, (s, e) => Dispatcher.BeginInvoke(new Action(OpenSettingsWindow)));
             contextMenu.Items.Add("-");
-            contextMenu.Items.Add("Exit", null, (s, e) => Dispatcher.Invoke(ExitApplication));
+            contextMenu.Items.Add("Exit", null, (s, e) => Dispatcher.BeginInvoke(new Action(ExitApplication)));
 
             _trayIcon.ContextMenuStrip = contextMenu;
-            _trayIcon.DoubleClick += (s, e) => Dispatcher.Invoke(ToggleOverlayVisibility);
+            _trayIcon.DoubleClick += (s, e) => Dispatcher.BeginInvoke(new Action(ToggleOverlayVisibility));
         }
 
         private void RestorePosition()
@@ -147,7 +153,8 @@ namespace WPMOverlay.Views
 
         private void OnSettingsUpdated(AppSettings settings)
         {
-            Dispatcher.Invoke(() => ApplySettings(settings));
+            if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
+            Dispatcher.BeginInvoke(new Action(() => ApplySettings(settings)));
         }
 
         private void ApplySettings(AppSettings s)
@@ -178,24 +185,42 @@ namespace WPMOverlay.Views
             }
         }
 
-        private void OnMetricsUpdated()
+        private void OnMetricsUpdated(MetricsSnapshot snapshot)
         {
             if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
-            Dispatcher.Invoke(UpdateVisuals);
+
+            lock (_snapshotLock)
+            {
+                _latestSnapshot = snapshot;
+            }
+
+            if (Interlocked.Exchange(ref _metricsDispatchPending, 1) == 0)
+            {
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    Interlocked.Exchange(ref _metricsDispatchPending, 0);
+                    MetricsSnapshot current;
+                    lock (_snapshotLock)
+                    {
+                        current = _latestSnapshot;
+                    }
+                    UpdateVisuals(current);
+                }), DispatcherPriority.Background);
+            }
         }
 
-        private void UpdateVisuals()
+        private void UpdateVisuals(MetricsSnapshot snapshot)
         {
-            var summary = _databaseService.GetStatsSummary();
-            bool active = _typingEngine.IsTypingActive;
+            var summary = snapshot.Summary ?? new StatsSummary();
+            bool active = snapshot.IsTypingActive;
 
             if (active)
             {
                 // Live typing active metrics
-                Value15s.Text = $"{Math.Round(_typingEngine.Current15sWpm)}";
-                Value30s.Text = $"{Math.Round(_typingEngine.Current30sWpm)}";
-                Value60s.Text = $"{Math.Round(_typingEngine.Current60sWpm)}";
-                Value5m.Text = $"{Math.Round(_typingEngine.Current5mWpm)}";
+                Value15s.Text = $"{Math.Round(snapshot.Current15sWpm)}";
+                Value30s.Text = $"{Math.Round(snapshot.Current30sWpm)}";
+                Value60s.Text = $"{Math.Round(snapshot.Current60sWpm)}";
+                Value5m.Text = $"{Math.Round(snapshot.Current5mWpm)}";
 
                 ValueTop.Text = $"{Math.Round(summary.AllTimeTopWpm)}";
                 ValueAvg.Text = $"{Math.Round(summary.OverallAvgWpm)}";
@@ -205,16 +230,16 @@ namespace WPMOverlay.Views
                 StatusText.Text = "Live";
                 StatusText.Foreground = new SolidColorBrush(WpfColor.FromRgb(16, 185, 129));
 
-                AccuracyText.Text = $"{_typingEngine.CurrentAccuracy:F0}% Acc";
+                AccuracyText.Text = $"{snapshot.CurrentAccuracy:F0}% Acc";
             }
             else
             {
                 // Idle state: RETENTION of last active session & sustained metrics!
-                double last15s = _typingEngine.LastFinished15sWpm > 0 ? _typingEngine.LastFinished15sWpm : summary.LastSession15sWpm;
-                double last30s = _typingEngine.LastFinished30sWpm > 0 ? _typingEngine.LastFinished30sWpm : summary.LastSession30sWpm;
-                double last60s = _typingEngine.LastFinished60sWpm > 0 ? _typingEngine.LastFinished60sWpm : summary.LastSession60sWpm;
-                double lastAvg = _typingEngine.LastFinishedAvgWpm > 0 ? _typingEngine.LastFinishedAvgWpm : summary.LastSessionWpm;
-                double last5m = _typingEngine.Current5mWpm > 0 ? _typingEngine.Current5mWpm : (_typingEngine.LastFinished5mWpm > 0 ? _typingEngine.LastFinished5mWpm : lastAvg);
+                double last15s = snapshot.LastFinished15sWpm > 0 ? snapshot.LastFinished15sWpm : summary.LastSession15sWpm;
+                double last30s = snapshot.LastFinished30sWpm > 0 ? snapshot.LastFinished30sWpm : summary.LastSession30sWpm;
+                double last60s = snapshot.LastFinished60sWpm > 0 ? snapshot.LastFinished60sWpm : summary.LastSession60sWpm;
+                double lastAvg = snapshot.LastFinishedAvgWpm > 0 ? snapshot.LastFinishedAvgWpm : summary.LastSessionWpm;
+                double last5m = snapshot.Current5mWpm > 0 ? snapshot.Current5mWpm : (snapshot.LastFinished5mWpm > 0 ? snapshot.LastFinished5mWpm : lastAvg);
 
                 Value15s.Text = $"{Math.Round(last15s)}";
                 Value30s.Text = $"{Math.Round(last30s)}";
@@ -229,7 +254,7 @@ namespace WPMOverlay.Views
                 StatusText.Text = "Last";
                 StatusText.Foreground = new SolidColorBrush(WpfColor.FromRgb(56, 189, 248));
 
-                AccuracyText.Text = $"{_typingEngine.LastFinishedAccuracy:F0}% Acc";
+                AccuracyText.Text = $"{snapshot.LastFinishedAccuracy:F0}% Acc";
             }
 
             if (_trayIcon != null)
@@ -282,20 +307,20 @@ namespace WPMOverlay.Views
         private void OnTypingStarted()
         {
             if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
-            Dispatcher.Invoke(() =>
+            Dispatcher.BeginInvoke(new Action(() =>
             {
                 _autoHideGraceTimer.Stop();
                 StartFadeIn();
-            });
+            }), DispatcherPriority.Normal);
         }
 
         private void OnTypingIdle()
         {
             if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished) return;
-            Dispatcher.Invoke(() =>
+            Dispatcher.BeginInvoke(new Action(() =>
             {
                 StartFadeOut();
-            });
+            }), DispatcherPriority.Background);
         }
 
         private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -378,7 +403,7 @@ namespace WPMOverlay.Views
                 historyWin.Owner = this;
                 historyWin.ShowDialog();
                 _typingEngine.RefreshStatsSummary();
-                UpdateVisuals();
+                UpdateVisuals(_typingEngine.GetCurrentSnapshot());
             }
             catch (Exception ex)
             {
